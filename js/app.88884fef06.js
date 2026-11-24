@@ -12,7 +12,7 @@ window.SW = window.SW || {};
 
 SW.CONFIG = {
   appName: 'SwissWind24',
-  version: '2.10.2',                                   // wird von tools/build.py in den Service Worker übernommen
+  version: '2.11.0',                                   // wird von tools/build.py in den Service Worker übernommen
   timeZone: 'Europe/Zurich',                          // alle Zeiten werden in Zürcher Zeit gerechnet und angezeigt
 
   /* ---------- Cache und Laden ---------- */
@@ -4067,34 +4067,32 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     setMore(!!SW.settings.rtMore);
     more.querySelector('#rt-morebtn').onclick = () => { const o = !SW.settings.rtMore; SW.saveSettings({ rtMore: o }); setMore(o); if (o && lastScan) drawScan(lastScan); };
     const mb = cMain.querySelector('.card-b'), cmpB = cCmp.querySelector('.card-b'), scanB = cScan.querySelector('.card-b');
-    mb.innerHTML = `<ol class="steps-bar" data-noswipe>
-        <li><button type="button" data-s="1"><i>1</i>Strecke</button></li><li><button type="button" data-s="2"><i>2</i>Tag &amp; Start</button></li>
-        <li><button type="button" data-s="3"><i>3</i>Route ansehen</button></li><li><button type="button" data-s="4"><i>4</i>Starten</button></li></ol>
-      <div id="rt-lakes" data-noswipe></div>
-      <div class="route-ctl" data-noswipe id="st-1">
-        <label><span><i class="st-n">1</i>Strecke</span><select id="rt-sel"></select></label>
-        <div class="rt-newbtns"><button class="btn" type="button" id="rt-new2">+ Neue Strecke</button><button class="btn" type="button" id="rt-newrg2">+ Neue Regatta</button><button class="btn" type="button" id="rt-ren2" hidden>✎ Umbenennen</button></div>
-        <label>Richtung<select id="rt-dir"><option value="0">vorwärts</option><option value="1">rückwärts</option></select></label>
-        <label id="st-2"><span><i class="st-n">2</i>Tag</span><select id="rt-day"></select></label>
-        <label><span><i class="st-n">2</i>Start</span><select id="rt-time"></select></label></div>
-      <p id="rt-lock" class="rt-lock"></p>
+    mb.innerHTML = `<div class="rt-top" data-noswipe>
+        <label class="rt-f-sel">Strecke<select id="rt-sel"></select></label>
+        <button class="btn rt-dirbtn" type="button" id="rt-dirbtn" title="Richtung umkehren" aria-label="Richtung umkehren">⇄</button>
+        <label>Tag<select id="rt-day"></select></label>
+        <label>Start<select id="rt-time"></select></label>
+        <button class="btn rt-menubtn" type="button" id="rt-menu" aria-label="Weitere Aktionen">⋯ Mehr</button></div>
+      <select id="rt-dir" hidden><option value="0">vorwärts</option><option value="1">rückwärts</option></select>
+      <p id="rt-dirtxt" class="rt-dirtxt"></p>
       <div id="rt-best" class="rt-best" data-noswipe></div>
-      <div class="map-legend ${SW.settings.legendSeen ? 'compact' : ''}" role="group" aria-label="Linien ein- und ausblenden" data-noswipe>${LINES.map(l => `<button type="button" class="lg-item" data-l="${l.k}" aria-pressed="${lineOn(l.k)}">
+      <div class="rt-mapwrap" data-noswipe>
+        <div id="rt-map" class="route-map"></div>
+        <div class="rt-mapacts">
+          <button class="btn primary edit-btn" type="button" id="rt-editbtn" aria-pressed="false">${ui.icon('edit')}<span>Bearbeiten</span></button>
+          <button class="btn save-btn" type="button" id="rt-save">${ui.icon('archiv')}<span>Speichern</span></button></div>
+        <div class="map-tools rt-maptools">
+          <button class="btn map-btn" type="button" data-z="in" aria-label="Hineinzoomen">+</button>
+          <button class="btn map-btn" type="button" data-z="out" aria-label="Herauszoomen">−</button>
+          <button class="btn map-btn" type="button" data-z="fit" aria-label="Strecke einpassen" title="Strecke einpassen">⤢</button>
+          <button class="btn map-btn" type="button" data-z="pan" aria-pressed="false" aria-label="Karte verschieben" title="Karte verschieben">✋</button></div>
+        <div id="rt-lakes"></div>
+        <div id="rt-tapbar" class="tapbar rt-tapover" hidden data-noswipe><span>Antippen setzt:</span><div class="chips small" id="rt-tap"></div></div></div>
+      <div class="map-legend compact" role="group" aria-label="Linien ein- und ausblenden" data-noswipe>${LINES.map(l => `<button type="button" class="lg-item" data-l="${l.k}" aria-pressed="${lineOn(l.k)}" title="${U.esc(l.note)}">
           <svg viewBox="0 0 36 10" aria-hidden="true"><line x1="1" y1="5" x2="35" y2="5" stroke="var(${l.color})" stroke-width="${l.k === 'route' ? 2 : 4}" ${l.dash ? `stroke-dasharray="${l.dash}"` : ''}/></svg>
-          <span><b>${l.label}</b><small>${l.note}</small></span></button>`).join('')}</div>
-      <div class="map-tools" data-noswipe id="st-3"><i class="st-n">3</i>
-        <button class="btn primary edit-btn" type="button" id="rt-editbtn" aria-pressed="false">${ui.icon('edit')}<span>Strecke bearbeiten</span></button>
-        <button class="btn save-btn" type="button" id="rt-save">${ui.icon('archiv')}<span>Im Archiv speichern</span></button>
-        <button class="btn map-btn" type="button" data-z="in" aria-label="Hineinzoomen">+</button>
-        <button class="btn map-btn" type="button" data-z="out" aria-label="Herauszoomen">−</button>
-        <button class="btn" type="button" data-z="fit">Strecke einpassen</button>
-        <button class="btn" type="button" data-z="pan" aria-pressed="false">Karte verschieben</button>
-        <span class="map-tip">Zoom mit den Knöpfen oder zwei Fingern</span></div>
-      <div id="rt-map" class="route-map" data-noswipe></div>
-      <div id="rt-tapbar" class="tapbar" hidden data-noswipe><span>Karte antippen setzt:</span>
-        <div class="chips small" id="rt-tap"></div></div>
+          <span><b>${l.label}</b></span></button>`).join('')}</div>
       <div id="fr-out"></div>
-      <details class="edit-panel" id="rt-editp"><summary id="rt-editsum">Strecke bearbeiten · Start und Ziel setzen</summary>
+      <details class="edit-panel" id="rt-editp"><summary id="rt-editsum">Strecke bearbeiten</summary>
         <ol id="rt-list" class="wp-list" data-noswipe></ol>
         <div id="rg-edit" class="rg-edit" data-noswipe hidden></div>
         <p class="route-hint" id="rt-hint"></p>
@@ -4102,14 +4100,11 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
           <label>Korridor ± km<input id="rt-cor" type="number" inputmode="decimal" min="0" max="2" step="0.1"></label>
           <label>Boot-Faktor %<input id="rt-fac" type="number" inputmode="numeric" min="50" max="200" step="5"></label></div>
         <div class="row-btns" data-noswipe><label class="toggle"><input type="checkbox" id="fr-marks"><span>Wegpunkte als Bahnmarken runden (generierte Route)</span></label></div>
-        <div class="row-btns" data-noswipe>
-          <button class="btn" type="button" id="rt-new">Neue Strecke</button>
-          <button class="btn" type="button" id="rt-newrg">Neue Regatta</button>
-          <button class="btn" type="button" id="rt-ren">Umbenennen</button>
-          <button class="btn" type="button" id="rt-gpx">${ui.icon('download')} GPX</button>
-          <label class="btn" for="rt-imp">GPX laden<input id="rt-imp" type="file" accept=".gpx,application/gpx+xml" hidden></label>
-          <button class="btn" type="button" id="rt-std" hidden>Wie Gelbes Band zurücksetzen</button>
-          <button class="btn" type="button" id="rt-del">Löschen</button></div>
+        <div class="row-btns" data-noswipe><button class="btn primary" type="button" id="rt-done">Fertig bearbeitet</button></div>
+        <div hidden>
+          <button type="button" id="rt-new"></button><button type="button" id="rt-newrg"></button><button type="button" id="rt-ren"></button>
+          <button type="button" id="rt-gpx"></button><input id="rt-imp" type="file" accept=".gpx,application/gpx+xml">
+          <button type="button" id="rt-std"></button><button type="button" id="rt-del"></button></div>
       </details>`;
     const tSel = mb.querySelector('#rt-time'), dSel = mb.querySelector('#rt-day'), editP = mb.querySelector('#rt-editp');
     for (let m = RT.startTimes.from * 60; m <= RT.startTimes.to * 60; m += RT.scanStepMinutes) tSel.insertAdjacentHTML('beforeend', `<option value="${m}" ${m === 12 * 60 ? 'selected' : ''}>${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}</option>`);
@@ -4138,14 +4133,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     let data = null, dataKey = '', tapMode = 'ziel', rgMode = 'boje', last = {};
     const editing = () => editP.open;
     // Schrittleiste: antippen springt zum Schritt, erledigte Schritte bekommen einen Haken
-    mb.querySelector('.steps-bar').onclick = e => {
-      const b = e.target.closest('[data-s]'); if (!b) return;
-      const el = b.dataset.s === '4' ? (mb.querySelector('#fr-start') || mb.querySelector('#fr-out')) : mb.querySelector('#st-' + b.dataset.s);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    };
     const markSteps = () => {
       const done = { 1: route().points.length >= 2, 2: route().points.length >= 2, 3: !!(last.free && last.free.done), 4: !!(SW.nav && SW.nav.state && SW.nav.state()) };
-      mb.querySelectorAll('.steps-bar [data-s]').forEach(b => b.classList.toggle('done', !!done[b.dataset.s]));
+      mb.dataset.steps = Object.keys(done).filter(k => done[k]).join('');   // für Tests
     };
 
     /* Karte */
@@ -4191,16 +4181,16 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       const cur = rg ? rgMode : tapMode;
       mb.querySelector('#rt-tap').innerHTML = modes.map(([k, l]) => `<button type="button" class="chip ${k === cur ? 'on' : ''}" data-m="${k}">${l}</button>`).join('');
       const lakeNow = SW.curLake();
-      mb.querySelector('#rt-lakes').innerHTML = SW.lakeChips(lakeNow);
+      mb.querySelector('#rt-lakes').innerHTML = SW.lakeChips(lakeNow, 'map-lakes');
       const onLake = SW.settings.routes.filter(x => SW.freeRoute.lakeOf(x.points) === lakeNow || x.id === r.id);
       mb.querySelector('#rt-sel').innerHTML = onLake.map(x => `<option value="${U.esc(x.id)}" ${x.id === r.id ? 'selected' : ''}>${U.esc(x.name)}</option>`).join('');
       mb.querySelector('#rt-cor').value = r.corridorKm;
       mb.querySelector('#rt-fac').value = r.speedFactor || 100;
       mb.querySelector('#rt-std').hidden = r.base !== 'gelbesband';        // Variante des Gelben Bands: auf Original zurücksetzen
       mb.querySelector('#rt-del').hidden = isFixed(r);                     // Vorlagen lassen sich nicht löschen
-      mb.querySelector('#rt-ren').hidden = mb.querySelector('#rt-ren2').hidden = isFixed(r);   // und nicht umbenennen
-      mb.querySelector('#rt-editbtn span').textContent = editing() ? 'Fertig bearbeitet' : isFixed(r) ? 'Eigene Version bearbeiten' : rg ? 'Regatta-Bahn bearbeiten' : 'Strecke bearbeiten';
-      mb.querySelector('#rt-lock').innerHTML = isFixed(r) ? `🔒 <b>${U.esc(r.name)}</b> ist fest eingebaut und bleibt immer gleich. Zum Ändern «Eigene Version bearbeiten» tippen – du gibst ihr einen Namen.` : r.base ? `Eigene Variante von «${U.esc((SW.settings.routes.find(x => x.id === r.base) || {}).name || r.base)}».` : '';
+      mb.querySelector('#rt-editbtn span').textContent = editing() ? 'Fertig' : isFixed(r) ? 'Eigene Version' : 'Bearbeiten';
+      { const ps = rev() ? r.points.slice().reverse() : r.points, nm = p => (p ? p.name.replace(/^(Start|Ziel) | \(Linie\)$/g, '') : '–');
+        mb.querySelector('#rt-dirtxt').innerHTML = r.points.length < 2 && !rg ? '<b>Ziel auf der Karte antippen</b> – danach Wegpunkte nach Wunsch' : `${isFixed(r) ? '🔒 ' : ''}<b>${U.esc(nm(ps[0]))} → ${U.esc(nm(ps[ps.length - 1]))}</b>${isFixed(r) ? ' · Vorlage, bleibt immer gleich' : r.base ? ' · eigene Variante' : ''}`; }
       mb.querySelector('#rt-tapbar').hidden = !editing();
       const n = r.points.length;
       const tag = k => (k === 0 ? 'S' : k === n - 1 ? 'Z' : String(k));
@@ -4390,9 +4380,32 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       out.querySelector('[data-e="new"]').onclick = () => mb.querySelector('#rt-new').click();
       out.querySelector('[data-e="rg"]').onclick = () => mb.querySelector('#rt-newrg').click();
     }
-    mb.querySelector('#rt-new2').onclick = () => mb.querySelector('#rt-new').click();
-    mb.querySelector('#rt-newrg2').onclick = () => mb.querySelector('#rt-newrg').click();
-    mb.querySelector('#rt-ren2').onclick = () => mb.querySelector('#rt-ren').click();
+    // «⋯ Mehr»: alles, was man selten braucht, in einem Menü
+    mb.querySelector('#rt-menu').onclick = () => {
+      const r = route(), fx = isFixed(r), rg = isRg();
+      const rows = [
+        ['new', '+ Neue Strecke', 'leer beginnen oder die aktuelle kopieren'],
+        ['newrg', '+ Neue Regatta', 'Startlinie, Bojen, Bahnfolge'],
+        fx ? ['own', 'Eigene Version anlegen', `«${r.name}» bleibt fest – Kopie mit eigenem Namen`] : ['ren', 'Umbenennen', `jetzt: «${r.name}»`],
+        ['save', 'Im Archiv speichern', 'mit Name, Datum, Notiz und berechneter Route'],
+        ['gpx', 'Als GPX exportieren', 'für Plotter oder andere Apps'],
+        ['imp', 'GPX-Datei laden', 'Strecke aus Datei übernehmen']
+      ].concat(r.base === 'gelbesband' ? [['std', 'Wie Gelbes Band zurücksetzen', 'Punkte und Linien wie das Original']] : [])
+       .concat(fx ? [] : [['del', rg ? 'Regatta löschen' : 'Strecke löschen', 'mit Rückfrage']]);
+      const el = U.el(`<div class="model-list">${rows.map(([k, t, d]) => `<button type="button" class="model-row ${k === 'del' ? 'danger' : ''}" data-m="${k}"><b>${U.esc(t)}</b><span>${U.esc(d)}</span></button>`).join('')}</div>`);
+      const sh = ui.sheet(r.name, el);
+      el.onclick = e => {
+        const b = e.target.closest('[data-m]'); if (!b) return; sh.close();
+        const m = b.dataset.m;
+        if (m === 'own') newSheet(rg ? 'regatta' : 'strecke', true);
+        else if (m === 'save') mb.querySelector('#rt-save').click();
+        else if (m === 'imp') mb.querySelector('#rt-imp').click();
+        else mb.querySelector('#rt-' + m).click();
+      };
+    };
+    mb.querySelector('#rt-done').onclick = () => { editP.open = false; };
+    // Richtung: ein Knopf statt Auswahlliste
+    mb.querySelector('#rt-dirbtn').onclick = () => { const d = mb.querySelector('#rt-dir'); d.value = d.value === '1' ? '0' : '1'; d.dispatchEvent(new Event('change')); drawRoute(); };
     mb.querySelector('#rt-sel').onchange = e => { SW.saveSettings({ routeId: e.target.value }); drawRoute(true); recalc(); };
     mb.querySelector('#rt-dir').onchange = () => computeAll();
     dSel.onchange = () => { computeAll(); scan(); };

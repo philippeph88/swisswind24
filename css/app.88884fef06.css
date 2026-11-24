@@ -1517,3 +1517,28 @@ html[data-theme="night"] iframe, html[data-theme="night"] .leaflet-tile, html[da
 .new-route .model-row { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-transform: none; letter-spacing: 0; font: inherit; color: var(--fg-1); }
 .new-route .model-row b { font: 700 17px var(--cond); color: var(--fg-0); letter-spacing: .02em; }
 .new-route .model-row span { font-size: 13.5px; color: var(--fg-2); }
+
+/* Planer aufgeräumt: eine Bedienzeile, Knöpfe auf der Karte */
+.rt-top { display: grid; grid-template-columns: minmax(0, 2fr) 52px minmax(0, 1fr) minmax(0, .8fr) auto; gap: 8px; align-items: end; }
+.rt-top label { display: flex; flex-direction: column; gap: 4px; font: 600 11.5px var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--fg-2); min-width: 0; }
+.rt-top .btn { min-height: 44px; }
+.rt-dirbtn { font-size: 22px; padding: 0; justify-content: center; }
+.rt-menubtn { font-weight: 700; padding: 0 16px; }
+.rt-dirtxt { margin: 8px 0 4px; font-size: 15px; color: var(--fg-1); } .rt-dirtxt b { color: var(--fg-0); }
+.rt-mapwrap { position: relative; margin: 6px 0 8px; }
+.rt-mapwrap .route-map { margin: 0; }
+.rt-mapacts { position: absolute; z-index: 500; top: 10px; left: 10px; display: flex; gap: 8px; }
+.rt-mapacts .btn { min-height: 46px; box-shadow: 0 2px 8px rgba(0,0,0,.45); }
+.rt-mapacts .save-btn { background: var(--bg-0); }
+.rt-maptools { position: absolute; z-index: 500; top: 10px; right: 10px; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.rt-maptools .map-btn { width: 46px; min-height: 46px; background: var(--bg-0); font-size: 20px; }
+.rt-maptools .map-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.rt-mapwrap .map-lakes { bottom: 10px; left: 10px; }
+.map-legend.compact { margin-top: 0; }
+.edit-panel > summary { display: none; }
+.edit-panel:not([open]) { display: none; }
+.edit-panel[open] { padding-top: 10px; }
+@media (max-width: 760px) { .rt-top { grid-template-columns: 1fr 52px; } .rt-top label:not(.rt-f-sel) { grid-column: auto; } .rt-menubtn { grid-column: 1 / -1; } }
+.rt-tapover { position: absolute; z-index: 500; top: 66px; left: 10px; margin: 0; padding: 6px 10px; background: var(--bg-0); border: 1px solid var(--line-2); box-shadow: 0 2px 8px rgba(0,0,0,.45); display: flex; align-items: center; gap: 8px; }
+.rt-tapover[hidden] { display: none; }
+.rt-tapover > span { font: 600 12px var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--fg-2); }

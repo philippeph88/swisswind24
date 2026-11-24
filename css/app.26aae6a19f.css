@@ -1542,3 +1542,27 @@ html[data-theme="night"] iframe, html[data-theme="night"] .leaflet-tile, html[da
 .rt-tapover { position: absolute; z-index: 500; top: 66px; left: 10px; margin: 0; padding: 6px 10px; background: var(--bg-0); border: 1px solid var(--line-2); box-shadow: 0 2px 8px rgba(0,0,0,.45); display: flex; align-items: center; gap: 8px; }
 .rt-tapover[hidden] { display: none; }
 .rt-tapover > span { font: 600 12px var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--fg-2); }
+
+/* Reviere: vier Kacheln nebeneinander, antippen für Details */
+.rv-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 10px; }
+.rv-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; min-height: 150px; border: 0; border-top: 3px solid transparent; background: var(--bg-1); color: var(--fg-1); text-align: left; cursor: pointer; }
+.rv-tile.on { background: var(--bg-2); border-top-color: var(--accent); }
+.rv-tile.go .rv-name b { color: var(--ok); }
+.rv-name b { display: block; font: 700 22px var(--cond); color: var(--fg-0); letter-spacing: .02em; }
+.rv-name small, .rv-verdict small { display: block; font-size: 12.5px; color: var(--fg-2); }
+.rv-wind { display: flex; align-items: center; gap: 8px; } .rv-wind small { font: 600 13px var(--cond); color: var(--fg-2); }
+.rv-verdict b { font: 600 15px var(--cond); letter-spacing: .02em; }
+.rv-sysdays { display: grid; gap: 10px; }
+.rv-sysday h3 { margin: 0 0 4px; font: 600 13px var(--cond); letter-spacing: .12em; text-transform: uppercase; color: var(--fg-2); }
+.rv-sysrow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.rv-sysrow b { min-width: 110px; text-align: right; }
+@media (max-width: 760px) { .rv-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Flusswelle: grosse Antwort */
+.w-verdict { padding: 16px 18px; }
+.w-verdict b { font-size: clamp(26px, 3.2vw, 38px); }
+.w-verdict span { font-size: 16px; width: 100%; } .w-verdict span b { font-size: inherit; color: var(--fg-0); }
+.verdict.st-bad { border-left-color: var(--bad); } .verdict.st-bad > b { color: var(--bad); }
+.verdict.st-warn > b { color: var(--warn); }
+/* Segelscreen: Lichtmodus mit einem Tipp */
+.theme-cyc { min-width: 104px; justify-content: center; font-weight: 700; }
+.sail-themes { margin-bottom: 14px; } .sail-themes .chip { min-height: 48px; flex: 1; justify-content: center; }

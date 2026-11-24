@@ -1566,3 +1566,32 @@ html[data-theme="night"] iframe, html[data-theme="night"] .leaflet-tile, html[da
 /* Segelscreen: Lichtmodus mit einem Tipp */
 .theme-cyc { min-width: 104px; justify-content: center; font-weight: 700; }
 .sail-themes { margin-bottom: 14px; } .sail-themes .chip { min-height: 48px; flex: 1; justify-content: center; }
+
+/* Reviere: Mini-Windkurve in jeder Kachel */
+.rv-spark { width: 100%; height: 64px; display: block; background: var(--bg-0); border: 1px solid var(--line); }
+.rv-spark .sp-area { fill: var(--accent); opacity: .22; } .rv-spark .sp-line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.rv-spark .sp-gust { fill: none; stroke: var(--fg-2); stroke-width: 1.2; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.rv-spark .sp-min { stroke: var(--ok); stroke-width: 1.2; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.rv-spark .sp-day { stroke: var(--line-2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.rv-tile { min-height: 0; }
+.rv-legend { display: flex !important; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.sp-k { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--accent); vertical-align: middle; margin-right: 4px; }
+.sp-k.gust { border-top: 1.5px dashed var(--fg-2); } .sp-k.min { border-top: 1.5px dashed var(--ok); }
+.rv-sysdays { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 10px; }
+@media (max-width: 900px) { .rv-sysdays { grid-template-columns: 1fr; } }
+.rv-info { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+.rv-info > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font: 600 14px var(--cond); letter-spacing: .12em; text-transform: uppercase; color: var(--fg-1); }
+.rv-sysrow { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+.rv-sysrow > span:first-child { grid-column: 1 / -1; font-size: 14px; color: var(--fg-1); }
+.rv-sysrow b { min-width: 0; }
+.rv-sysrow .pill { justify-self: start; }
+
+/* Windsurf-Startseite: Wind hier (GPS) */
+.here { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr); gap: 16px; align-items: center; }
+.here-big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.here-big b { font: 700 clamp(56px, 7vw, 88px)/1 var(--cond); color: var(--fg-0); }
+.here-big small { font: 600 15px var(--cond); color: var(--fg-1); letter-spacing: .04em; }
+.here-msg { margin: 6px 0 2px; font-size: 16px; } .here-msg b { font: 700 19px var(--cond); }
+.here-best { margin: 0 0 8px; color: var(--fg-1); }
+.here-tl { min-width: 0; }
+@media (max-width: 900px) { .here { grid-template-columns: 1fr; } }

@@ -12,7 +12,7 @@ window.SW = window.SW || {};
 
 SW.CONFIG = {
   appName: 'SwissWind24',
-  version: '2.12.2',                                   // wird von tools/build.py in den Service Worker übernommen
+  version: '2.14.0',                                   // wird von tools/build.py in den Service Worker übernommen
   timeZone: 'Europe/Zurich',                          // alle Zeiten werden in Zürcher Zeit gerechnet und angezeigt
 
   /* ---------- Cache und Laden ---------- */
@@ -70,7 +70,7 @@ SW.CONFIG = {
   modes: {
     segeln:   { label: 'Segeln',     sports: ['segeln'], pages: ['heute', 'segeln', 'spot', 'routen', 'wetter'],
                 cards: ['cockpit', 'win', 'wetter', 'rekord', 'lagen', 'fav'] },
-    windsurf: { label: 'Windsurf',   sports: ['foil', 'windsurf', 'kite'], pages: ['heute', 'spot', 'reviere', 'wetter'],                // kein Segelscreen, dafür die vier Surf-Reviere
+    windsurf: { label: 'Windsurf',   sports: ['windsurf'], pages: ['reviere', 'spot', 'wetter'],                // eine Startseite: Wind hier (GPS) + die vier Surf-Reviere
                 cards: ['cockpit', 'win', 'timeline', 'wetter', 'fav', 'lagen'] },
     welle:    { label: 'Flusswelle', sports: ['welle'], pages: ['welle'],                      // ein Bildschirm, alles zu Bremgarten
                 cards: ['welle', 'wetter', 'ampel', 'now'] },
@@ -505,7 +505,7 @@ SW.USERS_ITER = 5000;
     spotTab: 'prognose',                                             // Unterreiter der Spot-Seite
     routes: [defaultRoute(), JSON.parse(JSON.stringify(C.route.regattaPreset))],                                        // gespeicherte Strecken
     routeId: 'gelbesband',
-    cardsVer: 4, pagesVer: 7, spotsVer: 2, routesVer: 6, inst: null, nav: null,                                                     // Version der Karten-Liste (für Übernahme neuer Karten)
+    cardsVer: 4, pagesVer: 9, spotsVer: 2, routesVer: 6, inst: null, nav: null,                                                     // Version der Karten-Liste (für Übernahme neuer Karten)
     bandTab: 'lage', bandLines: null,
     archive: []                                                      // Routenarchiv: gespeicherte Strecken, Regatten und generierte Routen
   });
@@ -615,7 +615,12 @@ SW.USERS_ITER = 5000;
         const a = s.modes.alle;
         if (a && !a.pages.includes('reviere')) { const i = a.pages.indexOf('spot'); a.pages.splice(i < 0 ? a.pages.length : i + 1, 0, 'reviere'); }
       }
-      s.pagesVer = 7;
+      if ((raw.pagesVer || 1) < 8 && s.modes.windsurf && s.modes.windsurf.sports.join() === 'foil,windsurf,kite') s.modes.windsurf.sports = ['windsurf'];   // Windsurf: nur noch Windsurf
+      if ((raw.pagesVer || 1) < 9 && s.modes.windsurf) {                   // Windsurf: Heute und Reviere sind jetzt eine Seite
+        const pg = s.modes.windsurf.pages.filter(p => p !== 'heute' && p !== 'reviere');
+        s.modes.windsurf.pages = ['reviere'].concat(pg);
+      }
+      s.pagesVer = 9;
       if (!Array.isArray(s.archive)) s.archive = [];
       Object.keys(s.modes).forEach(k => { s.modes[k].pages = s.modes[k].pages.filter(p => PAGE_IDS.includes(p)); }); // entfernte Seiten (z. B. Bodensee) streichen
       if (!Array.isArray(s.routes) || !s.routes.length) s.routes = [defaultRoute()];
@@ -3767,7 +3772,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
           if (f.st === 'bad' || f.st === 'warn') return { st: f.st, text: `${f.text} heute` };
           if (!cand) return { st: 'na', text: 'keine Daten' };
           const r = A.comoRating(cand[1]); return { st: r.st, text: `${cand[0]} heute: ${r.text}` }; })(),
-        days: c.perDay.map(d => ({ day: d.day, items: [['Tivano (N, morgens)', d.tivano, A.comoRating(d.tivano)], ['Breva (S, Nachmittag)', d.breva, A.comoRating(d.breva)], ['Nordwind tagsüber (12–20 Uhr)', d.nord, nordRate(d)]] })) };
+        days: c.perDay.map(d => ({ day: d.day, items: [['Tivano (N, morgens)', d.tivano, A.comoRating(d.tivano)], ['Breva (S, Nachmittag)', d.breva, A.comoRating(d.breva)], ['Nordwind tagsüber', d.nord, nordRate(d)]] })) };
     }
     const series = rv.system === 'foehn' ? [['Föhn', A.diffSeries(by.lugano.hourly, by.zuerich.hourly), A.foehn]] :
       [['Bise', A.diffSeries(by.konstanz.hourly, by.genf.hourly), A.bise], ['Westwind', A.diffSeries(by.genf.hourly, by.bern.hourly), A.west]];
@@ -3782,98 +3787,163 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       }) })) };
   }
 
+  // Kleine Windkurve für eine Kachel: nächste 36 h, Mittelwind als Fläche, Böen gestrichelt, Linie = Sport-Schwelle
+  function spark(set, sport) {
+    const h = set.hourly, i0 = nowI(set), n = 36, W = 240, H = 64, top = 4;
+    const sp = h.v.wind_speed_10m.slice(i0, i0 + n), gs = h.v.wind_gusts_10m.slice(i0, i0 + n), ts = h.t.slice(i0, i0 + n);
+    const max = Math.max(25, sport.min + 6, U.max(gs) || 0);
+    const x = k => (k / (n - 1)) * W, y = v => H - (U.isNum(v) ? Math.min(v, max) / max : 0) * (H - top);
+    const line = arr => arr.map((v, k) => `${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const ticks = ts.map((t, k) => (U.hourOf(t) === 0 ? `<line x1="${x(k).toFixed(1)}" y1="0" x2="${x(k).toFixed(1)}" y2="${H}" class="sp-day"/>` : '')).join('');
+    return `<svg class="rv-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${ticks}
+      <polygon points="0,${H} ${line(sp)} ${W},${H}" class="sp-area"/><polyline points="${line(sp)}" class="sp-line"/><polyline points="${line(gs)}" class="sp-gust"/>
+      <line x1="0" y1="${y(sport.min).toFixed(1)}" x2="${W}" y2="${y(sport.min).toFixed(1)}" class="sp-min"/></svg>`;
+  }
+
+  // Grafik des lokalen Windsystems (Comersee: Nord- und Südwind, Urnersee: Föhn-Druck, Mittelland: Bise und West)
+  function systemChart(host, rv, set, by) {
+    const t = set.hourly.t, RU = C.rules;
+    if (rv.system === 'como') {
+      const c = A.como(set, A.days(set, 3)), K = C.como;
+      SW.chart(host, { t, height: 210, axes: { l: { min: 0, unit: 'kt' } },
+        series: [{ label: 'Nordwind (Tivano / Nordwind)', values: c.tiv, color: 'var(--accent)', width: 2.2, unit: 'kt' },
+                 { label: 'Südwind (Breva)', values: c.bre, color: 'var(--route)', width: 2.2, unit: 'kt' }],
+        thresholds: [{ y: K.goodKt, label: `gut ab ${K.goodKt} kt`, color: 'var(--ok)' }] });
+    } else if (rv.system === 'foehn') {
+      const d = A.diffSeries(by.lugano.hourly, by.zuerich.hourly);
+      SW.chart(host, { t, height: 210, axes: { l: { min: -8, max: 10, unit: 'hPa' } },
+        series: [{ label: 'Lugano − Zürich', values: d, color: 'var(--accent)', width: 2.2, unit: 'hPa', decimals: 1, area: true }],
+        thresholds: [{ y: RU.foehn.south, label: `Südföhn +${RU.foehn.south}`, color: 'var(--warn)' }, { y: RU.foehn.southStrong, label: `kräftig +${RU.foehn.southStrong}`, color: 'var(--bad)', right: true }, { y: 0, color: 'var(--fg-3)' }] });
+    } else {
+      const b = A.diffSeries(by.konstanz.hourly, by.genf.hourly), w = A.diffSeries(by.genf.hourly, by.bern.hourly);
+      SW.chart(host, { t, height: 210, axes: { l: { min: -2, max: 8, unit: 'hPa' } },
+        series: [{ label: 'Bise (Konstanz − Genf)', values: b, color: 'var(--accent)', width: 2.2, unit: 'hPa', decimals: 1 },
+                 { label: 'West (Genf − Bern)', values: w, color: 'var(--route)', width: 2.2, unit: 'hPa', decimals: 1 }],
+        thresholds: [{ y: RU.bise.weak, label: `Bise ab +${RU.bise.weak}`, color: 'var(--ok)' }, { y: RU.west.weak, label: `West ab +${RU.west.weak}`, color: 'var(--warn)', right: true }, { y: 0, color: 'var(--fg-3)' }] });
+    }
+  }
+
+  // «Hier jetzt»: Wind an der GPS-Position (oder am gewählten Spot) jetzt und in den nächsten Stunden
+  let offLive = null, hereKey = '';
+  function hereCard(card, best) {
+    const LV = SW.live, body = card.querySelector('.card-b');
+    const draw = async () => {
+      const f = LV.fix, gps = !!(LV.running && f), sp = SW.currentSpot();
+      const pos = gps ? f.pos : { lat: sp.lat, lon: sp.lon };
+      const key = `${pos.lat.toFixed(2)},${pos.lon.toFixed(2)}`;
+      if (key === hereKey && body.dataset.done) return;               // gleicher Ort (~1 km): nichts neu laden
+      hereKey = key;
+      const sport = L.sport();
+      try {
+        const r = await SW.api.forecast({ points: [{ lat: +pos.lat.toFixed(2), lon: +pos.lon.toFixed(2) }], hourly: ['wind_speed_10m', 'wind_gusts_10m', 'wind_direction_10m'], days: 2 });
+        const h = r.sets[0].hourly, i = U.indexAt(h.t, U.nowSec()), n = 10;
+        const nx = h.v.wind_speed_10m.slice(i, i + n), k = nx.findIndex(v => U.isNum(v) && v >= sport.min);
+        const msg = k === 0 ? `<b class="t-ok">Jetzt genug Wind für ${U.esc(sport.label)}</b>` : k > 0 ? `<b>Ab ${hh(h.t[i + k])} Uhr ${U.r(nx[k])} kt</b> – genug für ${U.esc(sport.label)}` : `<b>Die nächsten ${n} Stunden unter ${sport.min} kt</b>`;
+        body.innerHTML = `<div class="here">
+            <div class="here-now"><span class="f-lab">${gps ? `Dein Standort · GPS ± ${Math.round(f.acc)} m` : `${U.esc(sp.name)} · GPS aus`}</span>
+              <div class="here-big"><b class="num">${U.r(h.v.wind_speed_10m[i])}</b><small>kt · Böen ${U.r(h.v.wind_gusts_10m[i])} · aus ${U.dirName(h.v.wind_direction_10m[i])}</small></div>
+              <p class="here-msg">${msg}</p>
+              ${best ? `<p class="here-best">Bestes Revier gerade: <b>${U.esc(best.name)}</b> ${U.r(best.spd)} kt</p>` : ''}
+              ${gps ? '' : '<button class="btn primary" type="button" data-here="gps">GPS starten – Wind hier</button>'}</div>
+            <div class="here-tl">${g.timeline(h.t.slice(i, i + n), nx, h.v.wind_gusts_10m.slice(i, i + n), h.v.wind_direction_10m.slice(i, i + n))}</div></div>`;
+        body.dataset.done = '1';
+        const gb = body.querySelector('[data-here="gps"]'); if (gb) gb.onclick = () => { LV.start(); gb.textContent = 'GPS sucht …'; };
+        ui.stamp(card.querySelector('.card-f'), [r.meta]);
+      } catch (e) { body.innerHTML = ui.note('Wind am Standort nicht verfügbar: ' + U.esc(e.message), 'warn'); }
+    };
+    if (offLive) offLive();
+    offLive = LV.on(() => { if (card.isConnected) draw(); });          // neue GPS-Position → Wind dort
+    hereKey = ''; draw();
+  }
+
   SW.page('reviere', {
-    label: 'Reviere', icon: 'surf',
+    get label() { return SW.settings.mode === 'windsurf' ? 'Heute' : 'Reviere'; },   // im Modus Windsurf ist das die Startseite
+    get icon() { return SW.settings.mode === 'windsurf' ? 'heute' : 'surf'; },
+    setupLabel: 'Reviere (im Modus Windsurf: Startseite mit Wind hier)',
+    leave() { if (offLive) { offLive(); offLive = null; } },
     async render(root) {
       const sel = RV().some(r => r.id === SW.settings.revier) ? SW.settings.revier : RV()[0].id;
       const rv = RV().find(r => r.id === sel);
-      const cAll = ui.card({ id: 'c-rv-all', cls: 'hero', title: 'Reviere jetzt', skeleton: 'block' });
+      const cAll = ui.card({ id: 'c-rv-all', title: 'Reviere jetzt · nächste 36 Stunden', skeleton: 'block' });
       const grid = U.el('<div class="grid g-home"></div>');
-      const cNow = ui.card({ id: 'c-rv-now', cls: 'sz-full', title: `${rv.name} · ${rv.lake}`, skeleton: 'block' });
-      const cChart = ui.card({ id: 'c-rv-chart', cls: 'sz-full', title: 'Wind 3 Tage', skeleton: 'chart' });
-      const cSys = ui.card({ id: 'c-rv-sys', cls: 'sz-half', title: rv.systemTitle, skeleton: 'block' });
-      const cInfo = ui.card({ id: 'c-rv-info', cls: 'sz-half', title: `Gut zu wissen · ${rv.name}`, skeleton: 'none' });
-      [cNow, cChart, cSys, cInfo].forEach(c => grid.appendChild(c));
-      root.appendChild(cAll); root.appendChild(grid);
+      const cChart = ui.card({ id: 'c-rv-chart', cls: 'sz-full', title: `${rv.name} · Wind und Böen 3 Tage`, skeleton: 'chart' });
+      const cSys = ui.card({ id: 'c-rv-sys', cls: 'sz-full', title: `${rv.name} · ${rv.systemTitle}`, skeleton: 'chart' });
+      const cNow = ui.card({ id: 'c-rv-now', cls: 'sz-full', title: `${rv.name} · jetzt und nächste 24 Stunden`, skeleton: 'block' });
+      [cChart, cSys, cNow].forEach(c => grid.appendChild(c));
+      const cHere = ui.card({ id: 'c-rv-here', cls: 'hero', title: 'Hier jetzt und die nächsten Stunden', skeleton: 'block' });
+      root.appendChild(cHere); root.appendChild(cAll); root.appendChild(grid);
       const p = load();
+      p.then(({ by }) => {                                               // bestes Revier jetzt für den Hinweis oben
+        const best = RV().map(x => { const s = by[x.id], i = nowI(s); return { name: x.name, spd: s.hourly.v.wind_speed_10m[i] }; }).filter(x => U.isNum(x.spd)).sort((a, b) => b.spd - a.spd)[0];
+        hereCard(cHere, best);
+      }).catch(() => hereCard(cHere, null));
 
-      // Übersicht: alle vier Reviere, antippen öffnet die Details
+      // Übersicht: alle vier Reviere mit Mini-Windkurve, antippen öffnet die Grafiken darunter
       ui.fill(cAll, async body => {
         const { r, by } = await p;
-        const draw = () => {
-          const sport = L.sport();
-          body.innerHTML = '';
-          body.appendChild(L.sportChips(L.sportKey(), k => { SW.saveSettings({ sport: k }); draw(); SW.app.show('reviere', true); }));
-          body.insertAdjacentHTML('beforeend', `<div class="rv-tiles" data-noswipe>${RV().map(x => {
-            const set = by[x.id], h = set.hourly, i = nowI(set), days = A.days(set, 2);
-            const wins = A.windows(set, days, sport), today = wins.filter(w => w.day.date === U.todayKey()), later = wins.filter(w => w.day.date !== U.todayKey());
-            const sy = system(x, set, by).now;
-            const verdict = today.length ? `<b class="t-ok">Heute ${win(today[0])}</b>` : later.length ? `<b>Morgen ${win(later[0])}</b>` : '<b class="t-off">Heute und morgen nichts</b>';
-            return `<button type="button" class="rv-tile ${x.id === sel ? 'on' : ''} ${today.length ? 'go' : ''}" data-rv="${x.id}">
-              <span class="rv-name"><b>${U.esc(x.name)}</b><small>${U.esc(x.lake)}</small></span>
-              <span class="rv-wind">${L.windChip(h.v.wind_speed_10m[i], h.v.wind_gusts_10m[i], h.v.wind_direction_10m[i])}<small>${U.dirName(h.v.wind_direction_10m[i])}</small></span>
-              <span class="rv-sys">${ui.pill(sy.st, sy.text)}</span>
-              <span class="rv-verdict">${verdict}<small>${U.esc(sport.label)} ${sport.min}–${sport.max} kt</small></span></button>`;
-          }).join('')}</div>`);
-          body.querySelector('.rv-tiles').onclick = e => { const b = e.target.closest('[data-rv]'); if (!b || b.dataset.rv === sel) return; SW.saveSettings({ revier: b.dataset.rv }); SW.app.show('reviere', true); };
-        };
-        draw();
+        const sport = L.sport();
+        body.innerHTML = `<div class="rv-tiles" data-noswipe>${RV().map(x => {
+          const set = by[x.id], h = set.hourly, i = nowI(set), days = A.days(set, 2);
+          const wins = A.windows(set, days, sport), today = wins.filter(w => w.day.date === U.todayKey()), later = wins.filter(w => w.day.date !== U.todayKey());
+          const sy = system(x, set, by).now;
+          const verdict = today.length ? `<b class="t-ok">Heute ${win(today[0])}</b>` : later.length ? `<b>Morgen ${win(later[0])}</b>` : '<b class="t-off">Heute und morgen nichts</b>';
+          return `<button type="button" class="rv-tile ${x.id === sel ? 'on' : ''} ${today.length ? 'go' : ''}" data-rv="${x.id}">
+            <span class="rv-name"><b>${U.esc(x.name)}</b><small>${U.esc(x.lake)}</small></span>
+            <span class="rv-wind">${L.windChip(h.v.wind_speed_10m[i], h.v.wind_gusts_10m[i], h.v.wind_direction_10m[i])}<small>${U.dirName(h.v.wind_direction_10m[i])}</small></span>
+            ${spark(set, sport)}
+            <span class="rv-sys">${ui.pill(sy.st, sy.text)}</span>
+            <span class="rv-verdict">${verdict}</span></button>`;
+        }).join('')}</div>
+          <p class="hint rv-legend"><i class="sp-k area"></i> Mittelwind <i class="sp-k gust"></i> Böen <i class="sp-k min"></i> ${U.esc(sport.label)} ab ${sport.min} kt · Kachel antippen für die Grafiken</p>`;
+        body.querySelector('.rv-tiles').onclick = e => { const b = e.target.closest('[data-rv]'); if (!b || b.dataset.rv === sel) return; SW.saveSettings({ revier: b.dataset.rv }); SW.app.show('reviere', true); };
         return r.meta;
       });
 
-      // Details: jetzt, Zeitleiste, Fenster je Sportart, Wetter, Tageslicht
-      ui.fill(cNow, async body => {
-        const { r, by } = await p;
-        const set = by[rv.id], h = set.hourly, i = nowI(set), days = A.days(set, 2), d0 = days[0];
-        const rain3 = U.sum([0, 1, 2].map(k => h.v.precipitation[i + k]));
-        const warn = A.warning(h, 6);
-        const sports = L.modeSports().map(k => SW.settings.sports[k]);
-        const light = d0 && d0.sunset ? Math.round((d0.sunset - U.nowSec()) / 60) : null;
-        body.innerHTML = `${warn ? ui.note(`<b>${warn.level === 'storm' ? 'STURMWARNUNG' : 'WINDWARNUNG'}</b> ${U.esc(warn.text)} um ${U.hhmm(warn.at)}`, warn.level === 'storm' ? 'bad' : 'warn') : ''}
-          <div class="grid-fields six">
-            ${g.field({ label: 'Wind jetzt', value: U.r(h.v.wind_speed_10m[i]), unit: 'kt', sub: `Böen ${U.r(h.v.wind_gusts_10m[i])} kt · aus ${U.dirName(h.v.wind_direction_10m[i])}` })}
-            ${g.field({ label: 'Max. nächste 6 h', value: U.r(U.max(h.v.wind_speed_10m.slice(i, i + 6))), unit: 'kt', sub: `Böen bis ${U.r(U.max(h.v.wind_gusts_10m.slice(i, i + 6)))} kt` })}
-            ${g.field({ label: 'Luft', value: U.r(h.v.temperature_2m[i], 1), unit: '°C', sub: U.esc(L.wmo(h.v.weather_code[i])) })}
-            ${g.field({ label: 'Regen 3 h', value: U.r(rain3, 1), unit: 'mm', status: rain3 >= 1 ? 'warn' : '' })}
-            ${g.field({ label: 'Bewölkung', value: U.r(h.v.cloud_cover[i]), unit: '%' })}
-            ${g.field({ label: 'Tageslicht', value: U.isNum(light) && light > 0 ? `${Math.floor(light / 60)}:${String(light % 60).padStart(2, '0')}` : '–', unit: U.isNum(light) && light > 0 ? 'h' : '', sub: d0 && d0.sunset ? `Untergang ${U.hhmm(d0.sunset)}` : '' })}
-          </div>
-          <h3 class="sub-h">Fahrbar heute und morgen</h3>
-          <div class="grid-fields three">${sports.map(sp => {
-            const ws = A.windows(set, days, sp);
-            return g.field({ label: sp.label, value: ws.length ? `${U.dayLabel(ws[0].start).replace(/,.*$/, '')} ${hh(ws[0].start)}–${hh(ws[0].end)}` : '–', status: ws.length ? 'ok' : '',
-              sub: ws.length ? `Ø ${U.r(ws[0].avg)} kt · Böen ${U.r(ws[0].gust)} kt${ws.length > 1 ? ` · +${ws.length - 1} weitere` : ''}` : `${sp.min}–${sp.max} kt nicht erreicht` });
-          }).join('')}</div>
-          <h3 class="sub-h">Nächste 24 Stunden</h3>
-          ${g.timeline(h.t.slice(i, i + 24), h.v.wind_speed_10m.slice(i, i + 24), h.v.wind_gusts_10m.slice(i, i + 24), h.v.wind_direction_10m.slice(i, i + 24))}`;
-        return r.meta;
-      });
-
+      // Grafik 1: Wind und Böen über 3 Tage mit Richtungspfeilen
       ui.fill(cChart, async body => {
-        const { r, by } = await p; const h = by[rv.id].hourly, sp = L.sport();
-        body.innerHTML = '<div class="chart-host"></div>';
-        SW.chart(body.firstChild, { t: h.t, height: 240, axes: { l: { min: 0, unit: 'kt' } },
-          series: [{ label: 'Mittelwind', values: h.v.wind_speed_10m, color: 'var(--accent)', width: 2.4, unit: 'kt' },
+        const { r, by } = await p; const set = by[rv.id], h = set.hourly, sp = L.sport(), warn = A.warning(h, 6);
+        body.innerHTML = `${warn ? ui.note(`<b>${warn.level === 'storm' ? 'STURMWARNUNG' : 'WINDWARNUNG'}</b> ${U.esc(warn.text)} um ${U.hhmm(warn.at)}`, warn.level === 'storm' ? 'bad' : 'warn') : ''}<div class="chart-host"></div>`;
+        SW.chart(body.querySelector('.chart-host'), { t: h.t, height: 270, axes: { l: { min: 0, unit: 'kt' } },
+          series: [{ label: 'Mittelwind', values: h.v.wind_speed_10m, color: 'var(--accent)', width: 2.6, unit: 'kt' },
                    { label: 'Böen', values: h.v.wind_gusts_10m, color: 'var(--fg-2)', width: 1.4, dash: '4 3', unit: 'kt' }],
+          zones: [{ from: sp.min, to: sp.max, color: 'var(--ok)', opacity: 0.08 }],
           thresholds: [{ y: sp.min, label: `${sp.label} ab ${sp.min} kt`, color: 'var(--ok)' }, { y: C.warnings.stormGustKt, label: 'Sturm', color: 'var(--bad)', right: true }],
           arrows: { values: h.v.wind_direction_10m, speed: h.v.wind_speed_10m } });
         return r.meta;
       });
 
+      // Grafik 2: lokales Windsystem, darunter kurz je Tag
       ui.fill(cSys, async body => {
-        const { r, by } = await p;
-        const sy = system(rv, by[rv.id], by);
-        body.innerHTML = `<div class="rv-sysdays">${sy.days.map(d => `<div class="rv-sysday"><h3>${U.esc(U.dayLabel(d.day.start))}</h3>${d.items.map(([n, v, rt]) =>
-          `<div class="rv-sysrow"><span>${U.esc(n)}</span>${ui.pill(rt.st, rt.text)}<b class="num">${!v || !U.isNum(v.v) ? '–' : v.hpa ? `${v.v > 0 ? '+' : ''}${v.v.toFixed(1)} hPa` : `${U.r(v.v)} kt${v.t ? ' · ' + hh(v.t) + ' Uhr' : ''}`}</b></div>`).join('')}</div>`).join('')}</div>
+        const { r, by } = await p; const set = by[rv.id];
+        const sy = system(rv, set, by);
+        body.innerHTML = `<div class="chart-host"></div>
+          <div class="rv-sysdays">${sy.days.map(d => `<div class="rv-sysday"><h3>${U.esc(U.dayLabel(d.day.start))}</h3>${d.items.map(([n, v, rt]) =>
+            `<div class="rv-sysrow"><span>${U.esc(n)}</span>${ui.pill(rt.st, rt.text)}<b class="num">${!v || !U.isNum(v.v) ? '–' : v.hpa ? `${v.v > 0 ? '+' : ''}${v.v.toFixed(1)} hPa` : `${U.r(v.v)} kt${v.t ? ' · ' + hh(v.t) + ' Uhr' : ''}`}</b></div>`).join('')}</div>`).join('')}</div>
           <p class="hint">${U.esc(rv.systemHint)}</p>`;
+        systemChart(body.querySelector('.chart-host'), rv, set, by);
         return r.meta;
       });
 
-      cInfo.querySelector('.card-b').innerHTML = `<ul class="plain">${rv.info.map(t => `<li>${U.esc(t)}</li>`).join('')}</ul>
-        <p class="hint" style="display:block">Faustregeln, keine Garantie. Vor Ort immer Sturmwarnlichter und lokale Regeln beachten.</p>
-        <div class="row-btns"><a class="btn" href="https://www.windy.com/${rv.lat}/${rv.lon}?wind,${rv.lat},${rv.lon},11" target="_blank" rel="noopener">Windy öffnen</a>
-          <button class="btn" type="button" id="rv-fav">Als Spot öffnen (Prognose, Modelle)</button></div>`;
-      cInfo.querySelector('#rv-fav').onclick = () => { SW.useSearchResult({ id: 'rv-' + rv.id, name: rv.name, lat: rv.lat, lon: rv.lon, region: rv.lake }); location.hash = 'spot'; };
+      // Jetzt (kompakt) und Zeitleiste 24 h; Faustregeln eingeklappt
+      ui.fill(cNow, async body => {
+        const { r, by } = await p;
+        const set = by[rv.id], h = set.hourly, i = nowI(set), d0 = A.days(set, 1)[0];
+        const rain3 = U.sum([0, 1, 2].map(k => h.v.precipitation[i + k]));
+        const light = d0 && d0.sunset ? Math.round((d0.sunset - U.nowSec()) / 60) : null;
+        body.innerHTML = `<div class="grid-fields four">
+            ${g.field({ label: 'Wind jetzt', value: U.r(h.v.wind_speed_10m[i]), unit: 'kt', sub: `Böen ${U.r(h.v.wind_gusts_10m[i])} · aus ${U.dirName(h.v.wind_direction_10m[i])}` })}
+            ${g.field({ label: 'Luft', value: U.r(h.v.temperature_2m[i], 1), unit: '°C', sub: U.esc(L.wmo(h.v.weather_code[i])) })}
+            ${g.field({ label: 'Regen 3 h', value: U.r(rain3, 1), unit: 'mm', status: rain3 >= 1 ? 'warn' : '' })}
+            ${g.field({ label: 'Tageslicht', value: U.isNum(light) && light > 0 ? `${Math.floor(light / 60)}:${String(light % 60).padStart(2, '0')}` : '–', unit: U.isNum(light) && light > 0 ? 'h' : '', sub: d0 && d0.sunset ? `Untergang ${U.hhmm(d0.sunset)}` : '' })}
+          </div>
+          ${g.timeline(h.t.slice(i, i + 24), h.v.wind_speed_10m.slice(i, i + 24), h.v.wind_gusts_10m.slice(i, i + 24), h.v.wind_direction_10m.slice(i, i + 24))}
+          <details class="rv-info"><summary>Gut zu wissen · ${U.esc(rv.name)}</summary><ul class="plain">${rv.info.map(t => `<li>${U.esc(t)}</li>`).join('')}</ul>
+            <p class="hint" style="display:block">Faustregeln, keine Garantie. Vor Ort Sturmwarnlichter und lokale Regeln beachten.</p>
+            <div class="row-btns"><a class="btn" href="https://www.windy.com/${rv.lat}/${rv.lon}?wind,${rv.lat},${rv.lon},11" target="_blank" rel="noopener">Windy öffnen</a>
+              <button class="btn" type="button" data-rvspot>Als Spot öffnen (Prognose, Modelle)</button></div></details>`;
+        body.querySelector('[data-rvspot]').onclick = () => { SW.useSearchResult({ id: 'rv-' + rv.id, name: rv.name, lat: rv.lat, lon: rv.lon, region: rv.lake }); location.hash = 'spot'; };
+        return r.meta;
+      });
     }
   });
 })();
@@ -4030,7 +4100,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const suit = !U.isNum(tw) ? '' : tw < 10 ? 'dicker Neopren, Schuhe, Haube' : tw < 15 ? 'Neopren 5/4 mm' : tw < 19 ? 'Neopren 4/3 mm' : 'Shorty oder 3/2 mm';   // grobe Faustregel
         body.innerHTML = `<div class="grid-fields five">
             ${g.field({ label: 'Abfluss', value: U.r(q), unit: 'm³/s', status: z.st, sub: ui.pill(z.st, z.label) })}
-            ${g.field({ label: 'Trend 6 h', value: U.isNum(dQ) ? (dQ > 0 ? '+' : '') + U.r(dQ) : '–', unit: 'm³/s', sub: U.isNum(dQ) ? (Math.abs(dQ) < 5 ? 'stabil' : dQ > 0 ? 'steigend' : 'fallend') : '' })}
+            ${g.field({ label: 'Änderung seit 6 h', value: U.isNum(dQ) ? (dQ > 0 ? '+' : '') + U.r(dQ) : '–', unit: 'm³/s', sub: U.isNum(dQ) ? (Math.abs(dQ) < 5 ? '◆ stabil' : dQ > 0 ? `▲ steigt (vor 6 h: ${U.r(q - dQ)})` : `▼ sinkt (vor 6 h: ${U.r(q - dQ)})`) : '' })}
             ${g.field({ label: 'Wassertemperatur', value: U.r(tw, 1), unit: '°C', sub: U.esc(suit) })}
             ${g.field({ label: 'Pegel', value: U.r(hgt, 2), unit: 'm ü.M.', sub: U.isNum(dH) ? `${dH > 0 ? '+' : ''}${U.r(dH)} cm in 24 h` : '' })}
             ${g.field({ label: 'Messzeit', value: cur.flow ? U.hhmm(cur.flow.t) : '–', sub: U.isNum(age) && age > 60 ? '<span class="t-warn">Messung älter als 1 h</span>' : 'BAFU, 10-min-Wert' })}
@@ -4039,13 +4109,15 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         return [m1, m2];
       });
 
+      // Änderung gegenüber vor 6 Stunden in Worten: «▼ 12 m³/s weniger als vor 6 h»
+      const trendTxt = d => !U.isNum(d) ? 'Trend unbekannt' : Math.abs(d) < 5 ? '◆ stabil (seit 6 h)' : d > 0 ? `▲ ${U.r(d)} m³/s mehr als vor 6 h` : `▼ ${U.r(-d)} m³/s weniger als vor 6 h`;
       ui.fill(cUp, async body => {
         const [{ data: lat, meta: m1 }, { data: rng }] = await Promise.all([latestP, rangeP]);
         body.innerHTML = `<div class="grid-fields two">${W.upstream.map(u => {
           const x = lat[u.id] || {}, s = rng[u.id] && rng[u.id].flow;
           const d6 = x.flow && s ? x.flow.val - s.v[U.indexAt(s.t, U.nowSec() - 6 * 3600)] : null;
-          return g.field({ label: u.name, value: x.flow ? U.r(x.flow.val) : '–', unit: 'm³/s', sub: x.flow ? `${U.isNum(d6) ? (d6 > 0 ? '+' : '') + U.r(d6) + ' in 6 h · ' : ''}Stand ${U.hhmm(x.flow.t)}` : 'keine Messung' });
-        }).join('')}</div><p class="hint">Steigt der Abfluss in Luzern und Mühlau, steigt er wenige Stunden später auch in Bremgarten.</p>`;
+          return g.field({ label: u.name, value: x.flow ? U.r(x.flow.val) : '–', unit: 'm³/s', sub: x.flow ? `${trendTxt(d6)} · Messung ${U.hhmm(x.flow.t)}` : 'keine Messung' });
+        }).join('')}</div><p class="hint">Oberlieger = Messstationen flussaufwärts. Was dort steigt oder sinkt, kommt einige Stunden später in Bremgarten an.</p>`;
         return m1;
       });
 
@@ -5356,7 +5428,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     const wind = ['foil', 'windsurf', 'kite', 'segeln'];
     b.innerHTML = `<div class="chips" role="radiogroup" aria-label="Modus wählen">${Object.keys(S.modes).map(x => `<button type="button" class="chip ${x === k ? 'on' : ''}" data-m="${x}">${U.esc(S.modes[x].label)}${x === S.mode ? ' ●' : ''}</button>`).join('')}</div>
       <h3 class="sub-h">Seiten</h3>
-      <div class="toggles">${PAGES.map(p => `<label class="toggle"><input type="checkbox" data-page="${p.id}" ${m.pages.includes(p.id) ? 'checked' : ''} ${p.id === 'heute' ? 'disabled' : ''}><span>${U.esc(p.label)}</span></label>`).join('')}</div>
+      <div class="toggles">${PAGES.map(p => `<label class="toggle"><input type="checkbox" data-page="${p.id}" ${m.pages.includes(p.id) ? 'checked' : ''} ${p.id === 'heute' && m.pages.includes('heute') && m.pages.length === 1 ? 'disabled' : ''}><span>${U.esc(p.setupLabel || p.label)}</span></label>`).join('')}</div>
       <h3 class="sub-h">Karten auf «Heute» <small>Reihenfolge mit Pfeilen</small></h3>
       <ul class="spot-list card-order">${order.map((c, i) => `<li class="spot-item" data-c="${c}"><label class="toggle flat"><input type="checkbox" data-card="${c}" ${m.cards.includes(c) ? 'checked' : ''}><span>${U.esc(C.heuteCards[c])}</span></label>
         <button class="icon-btn" type="button" data-cu="${c}" aria-label="Nach oben" ${i ? '' : 'disabled'}>${ui.icon('up')}</button><button class="icon-btn" type="button" data-cd="${c}" aria-label="Nach unten" ${i < order.length - 1 ? '' : 'disabled'}>${ui.icon('down')}</button></li>`).join('')}</ul>
@@ -5385,7 +5457,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     };
     b.onchange = e => {
       const t = e.target;
-      if (t.dataset.page) save({ pages: PAGES.map(p => p.id).filter(id => id === 'heute' || (id === t.dataset.page ? t.checked : m.pages.includes(id))) });
+      if (t.dataset.page) { const pg = PAGES.map(p => p.id).filter(id => (id === t.dataset.page ? t.checked : m.pages.includes(id))); if (!pg.length) { ui.toast('Mindestens eine Seite', 'warn'); modeCard(b); return; } save({ pages: pg }); }
       if (t.dataset.card) save({ cards: order.filter(c => (c === t.dataset.card ? t.checked : m.cards.includes(c))) });
       if (t.dataset.sport) { const sp = wind.filter(w => (w === t.dataset.sport ? t.checked : m.sports.includes(w))); if (!sp.length) { ui.toast('Mindestens eine Sportart', 'warn'); modeCard(b); return; } save({ sports: sp.concat(m.sports.includes('welle') ? ['welle'] : []) }); }
       if (t.id === 'm-compact') { SW.saveSettings({ compact: t.checked }); SW.app.buildNav(); }
@@ -5538,7 +5610,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 
   /* ---------- Rahmen aufbauen ---------- */
   // Sichtbare Seiten = Seiten des aktiven Modus (Reihenfolge wie registriert); Setup ist immer erreichbar über das Zahnrad
-  app.visible = () => { const ids = SW.mode().pages; const v = SW.pages.filter(p => ids.includes(p.id)); return v.length ? v : [SW.pages[0]]; };
+  app.visible = () => { const ids = SW.mode().pages; const v = SW.pages.filter(p => ids.includes(p.id)).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)); return v.length ? v : [SW.pages[0]]; };   // Reihenfolge wie im Modus
   app.buildNav = function () {
     const vis = app.visible();
     const nav = U.$('#nav');

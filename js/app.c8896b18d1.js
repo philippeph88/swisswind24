@@ -12,7 +12,7 @@ window.SW = window.SW || {};
 
 SW.CONFIG = {
   appName: 'SwissWind24',
-  version: '2.14.0',                                   // wird von tools/build.py in den Service Worker übernommen
+  version: '2.16.0',                                   // wird von tools/build.py in den Service Worker übernommen
   timeZone: 'Europe/Zurich',                          // alle Zeiten werden in Zürcher Zeit gerechnet und angezeigt
 
   /* ---------- Cache und Laden ---------- */
@@ -66,15 +66,15 @@ SW.CONFIG = {
   defaultSpot: 'kuessnacht',
 
   /* ---------- Modi (Vorlagen; in der App unter Setup anpassbar) ---------- */
-  // pages = Seiten in der Navigation (routen = Planer/Wetter GB/Archiv, wetter = Wetterlagen/Karte), cards = Karten auf «Heute» in dieser Reihenfolge, sports = Auswahl-Chips
+  // pages = Seiten in der Navigation (routen = Planer/Archiv, wetter = Grosswetterlagen/Wetterlage Gelbes Band), cards = Karten auf «Heute» in dieser Reihenfolge, sports = Auswahl-Chips
   modes: {
     segeln:   { label: 'Segeln',     sports: ['segeln'], pages: ['heute', 'segeln', 'spot', 'routen', 'wetter'],
                 cards: ['cockpit', 'win', 'wetter', 'rekord', 'lagen', 'fav'] },
-    windsurf: { label: 'Windsurf',   sports: ['windsurf'], pages: ['reviere', 'spot', 'wetter'],                // eine Startseite: Wind hier (GPS) + die vier Surf-Reviere
+    windsurf: { label: 'Windsurf',   sports: ['windsurf'], pages: ['reviere', 'spot', 'webcams', 'wetter'],                // eine Startseite: Wind hier (GPS) + die vier Surf-Reviere
                 cards: ['cockpit', 'win', 'timeline', 'wetter', 'fav', 'lagen'] },
     welle:    { label: 'Flusswelle', sports: ['welle'], pages: ['welle'],                      // ein Bildschirm, alles zu Bremgarten
                 cards: ['welle', 'wetter', 'ampel', 'now'] },
-    alle:     { label: 'Alles',      sports: ['foil', 'windsurf', 'kite', 'segeln'], pages: ['heute', 'segeln', 'spot', 'reviere', 'welle', 'routen', 'wetter'],
+    alle:     { label: 'Alles',      sports: ['windsurf', 'segeln'], pages: ['heute', 'segeln', 'spot', 'reviere', 'welle', 'routen', 'wetter'],
                 cards: ['cockpit', 'win', 'wetter', 'timeline', 'fav', 'welle', 'rekord', 'lagen'] }
   },
   defaultMode: 'alle',
@@ -85,13 +85,11 @@ SW.CONFIG = {
   /* ---------- Sportarten (Mittelwind in Knoten) ---------- */
   // min = ab hier fahrbar, ideal = Bereich mit vollem Punktwert, max = darüber zu viel.
   sports: {
-    foil:     { label: 'Foil',      min: 9,  idealLo: 11, idealHi: 20, max: 26, gustMax: 32 },
     windsurf: { label: 'Windsurf',  min: 13, idealLo: 16, idealHi: 26, max: 34, gustMax: 40 },
-    kite:     { label: 'Kite',      min: 12, idealLo: 14, idealHi: 24, max: 30, gustMax: 34 },
     segeln:   { label: 'Segeln',    min: 6,  idealLo: 8,  idealHi: 18, max: 24, gustMax: 30 },
     welle:    { label: 'Flusswelle', unit: 'm³/s', min: 200, idealLo: 220, idealHi: 360, max: 390 }
   },
-  defaultSport: 'foil',
+  defaultSport: 'windsurf',
   minWindowHours: 2,                                  // «fahrbar» erst ab 2 zusammenhängenden Stunden
 
   /* ---------- Ampel und Warnungen ---------- */
@@ -297,13 +295,24 @@ SW.CONFIG = {
     ]
   },
   webcamRefreshMinutes: 5,
-  webcams: [
-    { id: 'urner-bucht', name: 'Urnersee – Bucht', src: 'https://elbeato.bplaced.net/webcamSurfclub/webcam_bucht_small.jpg' },
-    { id: 'urner-axenegg', name: 'Urnersee – Axenegg', src: 'https://www.elbeato.bplaced.net/webcamSurfclub/webcam_axenegg_small.jpg' },
-    { id: 'sisikon-05', name: 'Sisikon – Kamera 05', src: 'https://images.weserv.nl/?url=bhsboots.myhostpoint.ch/kamera05.jpg', note: 'Quelle nur per HTTP, daher über Bild-Proxy' },
-    { id: 'sisikon-04', name: 'Sisikon – Kamera 04', src: 'https://images.weserv.nl/?url=bhsboots.myhostpoint.ch/kamera04.jpg', note: 'Quelle nur per HTTP, daher über Bild-Proxy' },
-    { id: 'domaso', name: 'Domaso – Comersee', src: 'https://images.weserv.nl/?url=domasocamping.com/webcam/panorama.jpg&w=1400', fallback: 'https://domasocamping.com/webcam/panorama.jpg', note: 'Original 1.5 MB, verkleinert über Bild-Proxy' },
-    { id: 'eich', name: 'Eich – Sempachersee', src: 'https://windsurfclubeich.ch/webcam/hikvision_current.jpg' }
+  webcams: [                                         // nur Links: die Bilder gehören den Betreibern und werden nicht eingebettet (Standorte ungefähr)
+    { id: 'urner-bucht', area: 'Urnersee', name: 'Urnersee – Bucht', op: 'Surfclub Urnersee', lat: 46.9040, lon: 8.6210, url: 'https://elbeato.bplaced.net/webcamSurfclub/webcam_bucht_small.jpg' },
+    { id: 'urner-axenegg', area: 'Urnersee', name: 'Urnersee – Axenegg', op: 'Surfclub Urnersee', lat: 46.9230, lon: 8.6060, url: 'https://www.elbeato.bplaced.net/webcamSurfclub/webcam_axenegg_small.jpg' },
+    { id: 'sisikon-05', area: 'Urnersee', name: 'Sisikon – Kamera 05', op: 'Bootshaus Sisikon', lat: 46.9495, lon: 8.6200, url: 'http://bhsboots.myhostpoint.ch/kamera05.jpg' },
+    { id: 'sisikon-04', area: 'Urnersee', name: 'Sisikon – Kamera 04', op: 'Bootshaus Sisikon', lat: 46.9480, lon: 8.6215, url: 'http://bhsboots.myhostpoint.ch/kamera04.jpg' },
+    { id: 'domaso', area: 'Comersee', name: 'Domaso – Panorama', op: 'Camping Domaso', lat: 46.1525, lon: 9.3290, url: 'https://domasocamping.com/webcam/panorama.jpg', site: 'https://domasocamping.com' },
+    { id: 'eich', area: 'Sempachersee', name: 'Eich – Sempachersee', op: 'Windsurfclub Eich', lat: 47.1500, lon: 8.1660, url: 'https://windsurfclubeich.ch/webcam/hikvision_current.jpg', site: 'https://windsurfclubeich.ch' },
+    { id: 'sempach', area: 'Sempachersee', name: 'Sempach – Sempachersee', op: 'über Windy.com', lat: 47.1370, lon: 8.1930, url: 'https://www.windy.com/webcams/1313152852' },
+    // Vierwaldstättersee (nur Kameras mit Blick aufs Wasser, keine Bergkameras)
+    { id: 'luzern', area: 'Vierwaldstättersee', name: 'Luzern – Seebecken', op: 'Luzern Tourismus (360°)', lat: 47.0518, lon: 8.3085, url: 'https://luzerntourismus.roundshot.com/', site: 'https://www.luzern.com/de/informieren/planung/wetter-webcams' },
+    { id: 'sgv', area: 'Vierwaldstättersee', name: 'Luzern – Schifffahrt Vierwaldstättersee', op: 'SGV (360°)', lat: 47.0505, lon: 8.3130, url: 'https://sgv.roundshot.com/' },
+    { id: 'weggis', area: 'Vierwaldstättersee', name: 'Weggis – Seepanorama', op: 'Weggis Vitznau Rigi Tourismus (360°)', lat: 47.0330, lon: 8.4330, url: 'https://weggis.roundshot.com/' },
+    { id: 'brunnen', area: 'Vierwaldstättersee', name: 'Brunnen – Blick nach Süden', op: 'foto-webcam.eu', lat: 46.9990, lon: 8.6060, url: 'https://www.foto-webcam.eu/webcam/brunnen/' },
+    // Zugersee
+    { id: 'zug-hafen', area: 'Zugersee', name: 'Zug – Bootshafen', op: 'Yachtclub Zug', lat: 47.1712, lon: 8.5100, url: 'https://www.barile.ch/yczug/yczug/cam2.jpg', site: 'https://www.yczug.ch' },
+    { id: 'zug-stadt', area: 'Zugersee', name: 'Zug – Stadtpanorama', op: 'Stadt Zug (360°)', lat: 47.1665, lon: 8.5150, url: 'https://zug-stadt.roundshot.com/' },
+    { id: 'cham', area: 'Zugersee', name: 'Cham – Segelclub', op: 'Segelclub Cham', lat: 47.1800, lon: 8.4680, url: 'https://www.webcam.scc.ch/image.jpg', site: 'http://www.scc.ch' },
+    { id: 'walchwil', area: 'Zugersee', name: 'Walchwil – Blick zur Halbinsel Chiemen', op: 'über Windy.com', lat: 47.1000, lon: 8.5175, url: 'https://www.windy.com/webcams/1330087594' }
   ]
 };
 
@@ -313,21 +322,21 @@ window.SW = window.SW || {};
 SW.USERS = [
  {
   "id": "philippe",
-  "name": "Philippe Becker",
-  "salt": "e7e3386e24fb98f1",
-  "check": "d69138506bfaa368744aea49d604f504ac8f168de9f790d6ab4b9da2321781ff"
+  "name": "Philippe",
+  "salt": "817697cd22702b9e",
+  "check": "f55124c3d871de112bcf614d1ed47e405abd155c83a084acc3f0f0994dafd4c4"
  },
  {
   "id": "andre",
-  "name": "André Becker",
-  "salt": "68d0637c6e5ac0a6",
-  "check": "8a4dafa2d0d1a1c5dafe1cda718eaf23b12c01eeb24742f507d37ffa0dfbb4d2"
+  "name": "André",
+  "salt": "6f20d6c4f8191b89",
+  "check": "705229a271f03d1355bcf9bde9b0437712fdaaedc2b0679f9b6fa92d4ea30879"
  },
  {
   "id": "michael",
-  "name": "Michael Tobler",
-  "salt": "881384c3406f1fc8",
-  "check": "bf247120b612177991338891b22d9c5f1d94601628a62f3163504e0929727818"
+  "name": "Michael",
+  "salt": "28365a3b65a06a3e",
+  "check": "a0655550f5703adf6689bafc96e5f6bd29d9a7d3348e3597f5d7819491957cde"
  }
 ];
 SW.USERS_ITER = 5000;
@@ -487,7 +496,7 @@ SW.USERS_ITER = 5000;
     if (old && !localStorage.getItem(target)) localStorage.setItem(target, old);
     if (old) localStorage.removeItem(LEGACY);
   });
-  const PAGE_IDS = ['heute', 'segeln', 'spot', 'reviere', 'welle', 'routen', 'wetter'];
+  const PAGE_IDS = ['heute', 'segeln', 'spot', 'reviere', 'welle', 'routen', 'webcams', 'wetter'];
   const SUB_PAGES = ['band', 'gbwetter', 'archiv', 'lagen', 'karte'];        // Unterreiter der Sammelseiten  // Seiten, die ein Modus zeigen kann
 
   /* ---------- Einstellungen ---------- */
@@ -505,7 +514,7 @@ SW.USERS_ITER = 5000;
     spotTab: 'prognose',                                             // Unterreiter der Spot-Seite
     routes: [defaultRoute(), JSON.parse(JSON.stringify(C.route.regattaPreset))],                                        // gespeicherte Strecken
     routeId: 'gelbesband',
-    cardsVer: 4, pagesVer: 9, spotsVer: 2, routesVer: 6, inst: null, nav: null,                                                     // Version der Karten-Liste (für Übernahme neuer Karten)
+    cardsVer: 4, pagesVer: 11, spotsVer: 2, routesVer: 6, inst: null, nav: null,                                                     // Version der Karten-Liste (für Übernahme neuer Karten)
     bandTab: 'lage', bandLines: null,
     archive: []                                                      // Routenarchiv: gespeicherte Strecken, Regatten und generierte Routen
   });
@@ -525,6 +534,7 @@ SW.USERS_ITER = 5000;
       const d = defaults();
       const s = Object.assign(d, raw);
       s.sports = Object.assign(defaults().sports, raw.sports || {});  // neue Sportarten aus späteren Versionen ergänzen
+      Object.keys(s.sports).forEach(k => { if (!C.sports[k]) delete s.sports[k]; });   // gestrichene Sportarten (Foil, Kite) entfernen
       if (!C.models.some(m => m.id === s.model)) s.model = C.defaultModel; // veraltete Modellkennung ersetzen
       if (!Array.isArray(s.spots) || !s.spots.length) s.spots = d.spots;
       Object.keys(C.modes).forEach(k => { if (!s.modes[k]) s.modes[k] = JSON.parse(JSON.stringify(C.modes[k])); }); // neue Modi ergänzen
@@ -608,6 +618,7 @@ SW.USERS_ITER = 5000;
           s.modes[k].pages = out;
         });
         if (grp[s.page]) { s[grp[s.page] === 'routen' ? 'routenTab' : 'wetterTab'] = s.page; s.page = grp[s.page]; }
+        if (s.page === 'gbwetter') { s.wetterTab = 'gbwetter'; s.page = 'wetter'; }
       }
       if ((raw.pagesVer || 1) < 7) {                                       // Windsurf: Reviere statt Segelscreen; «Alles» bekommt Reviere
         const w = s.modes.windsurf;
@@ -620,7 +631,15 @@ SW.USERS_ITER = 5000;
         const pg = s.modes.windsurf.pages.filter(p => p !== 'heute' && p !== 'reviere');
         s.modes.windsurf.pages = ['reviere'].concat(pg);
       }
-      s.pagesVer = 9;
+      if ((raw.pagesVer || 1) < 10) {                                      // Webcams als eigene Seite (Karte mit Links) – nur im Modus Windsurf
+        ['windsurf'].forEach(k => { const pg = s.modes[k] && s.modes[k].pages; if (!pg || pg.includes('webcams')) return; const i = pg.indexOf('wetter'); pg.splice(i < 0 ? pg.length : i, 0, 'webcams'); });
+      }
+      if ((raw.pagesVer || 1) < 11) {                                      // Foil und Kite gestrichen: nur noch Windsurf, Segeln, Flusswelle
+        ['foil', 'kite'].forEach(k => { delete s.sports[k]; });
+        Object.keys(s.modes).forEach(k => { const m = s.modes[k]; m.sports = m.sports.filter(x => x !== 'foil' && x !== 'kite'); if (!m.sports.length) m.sports = JSON.parse(JSON.stringify((C.modes[k] || C.modes.alle).sports)); });
+        if (s.sport === 'foil' || s.sport === 'kite') s.sport = 'windsurf';
+      }
+      s.pagesVer = 11;
       if (!Array.isArray(s.archive)) s.archive = [];
       Object.keys(s.modes).forEach(k => { s.modes[k].pages = s.modes[k].pages.filter(p => PAGE_IDS.includes(p)); }); // entfernte Seiten (z. B. Bodensee) streichen
       if (!Array.isArray(s.routes) || !s.routes.length) s.routes = [defaultRoute()];
@@ -1627,6 +1646,17 @@ SW.LAKES.zugersee = { name: 'Zugersee', bbox: [8.45291, 47.06147, 8.52814, 47.18
   outer: [[[8.47819,47.17836],[8.48123,47.17789],[8.48136,47.17677],[8.48077,47.17637],[8.48121,47.17588],[8.48183,47.17601],[8.48217,47.17697],[8.48316,47.17738],[8.48729,47.17806],[8.49254,47.17751],[8.49209,47.17715],[8.49151,47.17749],[8.49224,47.17676],[8.49524,47.17686],[8.49625,47.17643],[8.49575,47.17599],[8.49605,47.17569],[8.49654,47.17574],[8.49697,47.17627],[8.49732,47.17616],[8.49765,47.17494],[8.49876,47.17523],[8.50143,47.17512],[8.50426,47.17281],[8.50499,47.17256],[8.50528,47.17272],[8.50507,47.17241],[8.50629,47.17209],[8.50721,47.17129],[8.50730,47.17169],[8.50761,47.17124],[8.50828,47.17137],[8.50817,47.17182],[8.50908,47.17180],[8.51108,47.17121],[8.51299,47.17018],[8.51355,47.17023],[8.51414,47.16934],[8.51374,47.16903],[8.51426,47.16753],[8.51407,47.16728],[8.51354,47.16740],[8.51416,47.16630],[8.51309,47.16466],[8.51231,47.15938],[8.51135,47.15743],[8.50970,47.15619],[8.51091,47.15515],[8.51091,47.15414],[8.50984,47.15350],[8.50867,47.15212],[8.50838,47.15028],[8.50704,47.15019],[8.50720,47.14944],[8.50670,47.14904],[8.50690,47.14856],[8.50637,47.14763],[8.50494,47.14718],[8.50573,47.14610],[8.50542,47.14547],[8.50557,47.14289],[8.50427,47.13932],[8.50597,47.13724],[8.50605,47.13627],[8.50205,47.13134],[8.50063,47.13090],[8.49965,47.13019],[8.49828,47.12814],[8.49793,47.12587],[8.49476,47.12360],[8.49582,47.12168],[8.49645,47.11907],[8.49732,47.11771],[8.49835,47.11750],[8.49947,47.11682],[8.49976,47.11515],[8.50056,47.11423],[8.50118,47.11248],[8.50237,47.11114],[8.50255,47.10994],[8.50362,47.10797],[8.50538,47.10756],[8.50593,47.10650],[8.50808,47.10612],[8.50921,47.10316],[8.51038,47.10236],[8.51112,47.10123],[8.51201,47.10085],[8.51283,47.09941],[8.51453,47.09851],[8.51565,47.09629],[8.51687,47.09541],[8.51813,47.09550],[8.51815,47.09512],[8.51903,47.09461],[8.51909,47.09360],[8.52074,47.09252],[8.52109,47.09062],[8.52206,47.08976],[8.52254,47.08983],[8.52357,47.08932],[8.52384,47.08838],[8.52287,47.08626],[8.52325,47.08573],[8.52323,47.08459],[8.52293,47.08413],[8.52228,47.08411],[8.52314,47.08239],[8.52307,47.08147],[8.52461,47.07934],[8.52573,47.07670],[8.52658,47.07609],[8.52812,47.07344],[8.52814,47.07171],[8.52791,47.07044],[8.52708,47.06918],[8.52636,47.06880],[8.52518,47.06871],[8.52530,47.06783],[8.52467,47.06664],[8.52255,47.06504],[8.52212,47.06409],[8.52142,47.06362],[8.52122,47.06281],[8.52036,47.06218],[8.51742,47.06147],[8.51418,47.06163],[8.51236,47.06410],[8.51168,47.06432],[8.51119,47.06525],[8.51019,47.06582],[8.50945,47.06794],[8.50872,47.06855],[8.50597,47.06882],[8.50513,47.06994],[8.50325,47.07058],[8.50227,47.07058],[8.50000,47.07218],[8.49847,47.07229],[8.49635,47.07319],[8.49396,47.07476],[8.49026,47.07649],[8.48869,47.07838],[8.48513,47.07950],[8.48352,47.08086],[8.48333,47.08177],[8.48242,47.08204],[8.48169,47.08282],[8.47853,47.08446],[8.47719,47.08583],[8.47123,47.08730],[8.46882,47.08918],[8.46669,47.09212],[8.46535,47.09313],[8.46504,47.09460],[8.46405,47.09577],[8.46394,47.09661],[8.46443,47.09747],[8.46595,47.09797],[8.47111,47.10064],[8.47289,47.10165],[8.47452,47.10331],[8.47578,47.10380],[8.47556,47.10528],[8.47628,47.10615],[8.47799,47.10637],[8.48113,47.10735],[8.48336,47.10857],[8.48590,47.10910],[8.48660,47.10954],[8.48722,47.11049],[8.48744,47.11218],[8.48807,47.11267],[8.48691,47.11470],[8.48584,47.11471],[8.48503,47.11519],[8.48463,47.11502],[8.48323,47.11546],[8.48128,47.11455],[8.47862,47.11435],[8.47632,47.11475],[8.47568,47.11440],[8.47355,47.11455],[8.47234,47.11502],[8.47228,47.11563],[8.46997,47.11621],[8.46843,47.11711],[8.46766,47.11859],[8.46583,47.11955],[8.46523,47.12028],[8.46446,47.12169],[8.46509,47.12368],[8.46405,47.12654],[8.46431,47.12820],[8.46417,47.13000],[8.46387,47.13010],[8.46459,47.13114],[8.46784,47.13342],[8.46833,47.13502],[8.47175,47.13768],[8.47293,47.13964],[8.47234,47.14112],[8.47043,47.14119],[8.46936,47.14043],[8.46706,47.13952],[8.46657,47.13861],[8.46582,47.13844],[8.46383,47.13951],[8.46152,47.13974],[8.46005,47.14027],[8.45970,47.14088],[8.45823,47.14144],[8.45852,47.14216],[8.45801,47.14384],[8.45876,47.14618],[8.45769,47.14674],[8.45791,47.14772],[8.45762,47.14784],[8.45897,47.14825],[8.45970,47.15043],[8.46278,47.15124],[8.46174,47.15175],[8.46157,47.15480],[8.46268,47.15541],[8.46285,47.15588],[8.46390,47.15629],[8.46040,47.15745],[8.45968,47.15799],[8.45959,47.15905],[8.46075,47.15924],[8.46079,47.15970],[8.46131,47.15992],[8.46083,47.16008],[8.45970,47.16164],[8.45953,47.16315],[8.45823,47.16476],[8.45765,47.16638],[8.45421,47.16845],[8.45291,47.17201],[8.45572,47.17555],[8.45824,47.17669],[8.45893,47.17641],[8.45877,47.17686],[8.46151,47.17800],[8.46208,47.17886],[8.46168,47.17987],[8.46346,47.17857],[8.46704,47.17733],[8.46779,47.17784],[8.46794,47.17745],[8.46785,47.17847],[8.46844,47.17955],[8.46869,47.17948],[8.46837,47.17969],[8.46854,47.18003],[8.46938,47.18002],[8.46976,47.18033],[8.46950,47.18062],[8.47312,47.18159],[8.47522,47.18108],[8.47587,47.18128],[8.47575,47.18288],[8.47634,47.18200],[8.47765,47.18234],[8.47843,47.18195],[8.47851,47.18126],[8.47759,47.18032],[8.47801,47.17774],[8.47819,47.17836]]],
   inner: [[[8.49701,47.17454],[8.49699,47.17414],[8.49745,47.17422],[8.49741,47.17453],[8.49701,47.17454]],[[8.49619,47.12650],[8.49666,47.12669],[8.49619,47.12650]],[[8.46181,47.17811],[8.46203,47.17781],[8.46226,47.17838],[8.46181,47.17811]]] };
 
+/* ---- js/lakes-extra.js ---- */
+/* Uferlinien der Seen, vereinfacht auf ~40 m. Daten © OpenStreetMap-Mitwirkende, Open Database License (ODbL 1.0). Erzeugt mit tools/make_lake.py. */
+window.SW = window.SW || {};
+SW.LAKES_EXTRA = SW.LAKES_EXTRA || {};
+SW.LAKES_EXTRA.comersee = { name: 'Comersee', bbox: [9.06696, 45.81312, 9.38893, 46.17026],
+  outer: [[[9.26409,45.98169],[9.26373,45.98281],[9.26621,45.98387],[9.26728,45.98671],[9.26677,45.99049],[9.26365,45.99113],[9.26058,45.98918],[9.26041,45.98577],[9.25426,45.98128],[9.25135,45.97783],[9.25204,45.97757],[9.24966,45.97703],[9.24712,45.97724],[9.24145,45.97267],[9.23748,45.97073],[9.23472,45.97042],[9.22665,45.96206],[9.22229,45.96160],[9.22081,45.95978],[9.22074,45.95799],[9.21780,45.95654],[9.21605,45.95382],[9.21070,45.95058],[9.20872,45.94983],[9.20592,45.94993],[9.20103,45.94672],[9.19419,45.94687],[9.19183,45.94600],[9.18712,45.94556],[9.18315,45.94601],[9.17966,45.94432],[9.17748,45.94431],[9.17053,45.94206],[9.16966,45.94107],[9.16062,45.93912],[9.15209,45.93510],[9.15077,45.93373],[9.15068,45.93113],[9.14959,45.92921],[9.15104,45.92577],[9.15349,45.91299],[9.15501,45.91038],[9.15433,45.91068],[9.15271,45.90898],[9.15405,45.90554],[9.15225,45.90033],[9.15363,45.89665],[9.15307,45.89408],[9.15561,45.88692],[9.15490,45.88564],[9.15655,45.88067],[9.15618,45.87784],[9.15509,45.87632],[9.15641,45.87327],[9.15587,45.86965],[9.15256,45.86590],[9.14955,45.86537],[9.14970,45.86432],[9.14851,45.86311],[9.14635,45.86267],[9.14614,45.86188],[9.13995,45.85793],[9.13759,45.85802],[9.13605,45.85747],[9.12800,45.85897],[9.12257,45.85874],[9.11899,45.85940],[9.11268,45.85846],[9.11366,45.85444],[9.11178,45.85315],[9.10951,45.84994],[9.10682,45.84860],[9.10544,45.84704],[9.10564,45.84585],[9.10311,45.84254],[9.10313,45.84055],[9.09955,45.83772],[9.09899,45.83623],[9.09527,45.83434],[9.09556,45.83355],[9.09426,45.83189],[9.09101,45.82940],[9.08648,45.82711],[9.08021,45.82567],[9.07964,45.82475],[9.07656,45.82336],[9.07974,45.82075],[9.08046,45.81879],[9.08263,45.81740],[9.08214,45.81515],[9.08268,45.81620],[9.08299,45.81512],[9.08050,45.81343],[9.07758,45.81312],[9.07649,45.81372],[9.08029,45.81541],[9.07647,45.81375],[9.07565,45.81497],[9.07463,45.81523],[9.06984,45.81434],[9.06731,45.81602],[9.06696,45.82117],[9.06859,45.82587],[9.07262,45.83118],[9.07195,45.83180],[9.07625,45.83355],[9.07564,45.83396],[9.07620,45.83432],[9.07585,45.83571],[9.07735,45.83648],[9.07780,45.83815],[9.07875,45.83878],[9.07800,45.84023],[9.07867,45.84348],[9.08108,45.84514],[9.08094,45.84631],[9.08429,45.84639],[9.08710,45.84547],[9.08930,45.84602],[9.09028,45.85254],[9.09185,45.85335],[9.09447,45.85758],[9.09723,45.85927],[9.09875,45.85902],[9.10145,45.85962],[9.10275,45.86132],[9.10538,45.86189],[9.10734,45.86426],[9.11219,45.86695],[9.12408,45.87106],[9.13668,45.87775],[9.13841,45.87892],[9.13845,45.88019],[9.13900,45.88016],[9.13824,45.88061],[9.14218,45.88523],[9.14509,45.89243],[9.13740,45.89911],[9.13160,45.90710],[9.13114,45.90919],[9.13247,45.91782],[9.13135,45.92195],[9.13180,45.92337],[9.13089,45.92468],[9.13100,45.92681],[9.12839,45.93194],[9.12878,45.93688],[9.12802,45.93939],[9.12909,45.94542],[9.13155,45.94713],[9.13660,45.94872],[9.14625,45.95418],[9.15940,45.95898],[9.16541,45.96238],[9.16797,45.96456],[9.16913,45.96463],[9.16962,45.96601],[9.17280,45.96640],[9.17283,45.96776],[9.17498,45.96882],[9.18001,45.96722],[9.18326,45.96727],[9.18511,45.96650],[9.19078,45.96760],[9.19691,45.96564],[9.20138,45.96556],[9.20253,45.96480],[9.20178,45.96935],[9.20091,45.96950],[9.19998,45.97092],[9.19660,45.97066],[9.19593,45.97184],[9.19720,45.97364],[9.19991,45.97427],[9.20034,45.97619],[9.20702,45.98047],[9.21266,45.98038],[9.21588,45.98249],[9.22224,45.98140],[9.22356,45.98262],[9.22759,45.98383],[9.23556,45.98819],[9.23955,45.99449],[9.23842,45.99801],[9.23471,46.00290],[9.23436,46.00649],[9.23736,46.01490],[9.23652,46.01651],[9.23717,46.01870],[9.23849,46.01929],[9.23781,46.01936],[9.24205,46.02048],[9.24293,46.02174],[9.24176,46.02428],[9.23785,46.02680],[9.23717,46.03313],[9.23806,46.03601],[9.24124,46.03828],[9.24363,46.03829],[9.24355,46.03910],[9.24450,46.03954],[9.24587,46.03962],[9.24641,46.03911],[9.24843,46.03995],[9.25104,46.03983],[9.25135,46.04154],[9.25290,46.04282],[9.25591,46.04908],[9.26074,46.05260],[9.26007,46.05591],[9.26074,46.05744],[9.26558,46.06121],[9.26901,46.06254],[9.26972,46.06530],[9.27240,46.06679],[9.27271,46.06798],[9.27783,46.06968],[9.27908,46.07088],[9.27836,46.07204],[9.27957,46.07269],[9.27975,46.07378],[9.27827,46.07510],[9.27700,46.08097],[9.27827,46.08464],[9.27777,46.08777],[9.28003,46.08882],[9.27947,46.09192],[9.28064,46.09358],[9.27754,46.09963],[9.27863,46.10138],[9.27778,46.10575],[9.27867,46.10993],[9.27705,46.11410],[9.28077,46.11906],[9.27937,46.12210],[9.28057,46.12272],[9.28545,46.12332],[9.28431,46.12380],[9.28582,46.12371],[9.28532,46.12465],[9.28644,46.12436],[9.28578,46.12542],[9.28637,46.12756],[9.28793,46.12807],[9.29068,46.13047],[9.29098,46.13407],[9.29316,46.13481],[9.30020,46.13542],[9.30455,46.13701],[9.30619,46.14095],[9.30602,46.14319],[9.30489,46.14440],[9.30615,46.14721],[9.31158,46.14834],[9.32039,46.14857],[9.32530,46.15061],[9.32827,46.14967],[9.32937,46.14861],[9.33580,46.14949],[9.33802,46.15072],[9.33946,46.15261],[9.33869,46.15723],[9.34210,46.15896],[9.34794,46.16395],[9.35291,46.16556],[9.35520,46.16736],[9.36181,46.16955],[9.36438,46.16892],[9.36581,46.16785],[9.36976,46.16815],[9.37047,46.16768],[9.36983,46.16816],[9.37206,46.16882],[9.37217,46.16822],[9.37104,46.16771],[9.37363,46.16823],[9.37647,46.17026],[9.37777,46.17023],[9.37852,46.16936],[9.37886,46.16749],[9.37724,46.16671],[9.37727,46.16601],[9.38012,46.16267],[9.38071,46.16061],[9.38019,46.15989],[9.38117,46.15875],[9.37974,46.15832],[9.37905,46.15684],[9.37608,46.15427],[9.37589,46.15316],[9.37517,46.15307],[9.37477,46.15019],[9.37576,46.15013],[9.37704,46.14879],[9.37734,46.14455],[9.37451,46.14281],[9.37239,46.14242],[9.37255,46.13971],[9.37207,46.13869],[9.37112,46.13878],[9.37232,46.13849],[9.37005,46.13762],[9.37087,46.13739],[9.36830,46.13744],[9.36268,46.13600],[9.35692,46.13699],[9.35093,46.13595],[9.33962,46.12998],[9.33885,46.12819],[9.34160,46.12764],[9.34388,46.12503],[9.34477,46.12473],[9.34515,46.12520],[9.34615,46.12418],[9.34662,46.12159],[9.34533,46.11891],[9.34530,46.11659],[9.34264,46.11628],[9.33752,46.11710],[9.33197,46.11514],[9.32722,46.11420],[9.32387,46.11524],[9.32373,46.11589],[9.32791,46.11926],[9.33162,46.12055],[9.33377,46.12244],[9.33492,46.12264],[9.33576,46.12430],[9.33463,46.12568],[9.32175,46.12117],[9.31423,46.12010],[9.31186,46.11810],[9.31045,46.11594],[9.31118,46.11383],[9.31345,46.11330],[9.31533,46.11068],[9.31874,46.10931],[9.32031,46.10608],[9.32004,46.10429],[9.31605,46.09947],[9.31648,46.09850],[9.31520,46.09504],[9.30971,46.08973],[9.30950,46.08600],[9.31090,46.08335],[9.31030,46.08157],[9.30489,46.08008],[9.30013,46.07692],[9.29838,46.07678],[9.29929,46.07661],[9.29826,46.07648],[9.29740,46.07265],[9.29972,46.07089],[9.30181,46.07123],[9.30159,46.07056],[9.30369,46.06997],[9.30554,46.06858],[9.30690,46.06902],[9.30705,46.06801],[9.30545,46.06806],[9.30955,46.06756],[9.30954,46.06608],[9.31154,46.06399],[9.31131,46.06278],[9.31249,46.06048],[9.31279,46.05546],[9.31043,46.05122],[9.30723,46.04970],[9.30594,46.04779],[9.30513,46.04767],[9.30526,46.04572],[9.30277,46.04399],[9.29785,46.04248],[9.29896,46.04027],[9.29989,46.04022],[9.30207,46.03818],[9.30046,46.03750],[9.29899,46.03528],[9.29600,46.03306],[9.28930,46.02992],[9.28793,46.02837],[9.28383,46.02645],[9.28640,46.02221],[9.28721,46.01797],[9.28681,46.01668],[9.28403,46.01603],[9.28248,46.01495],[9.28291,46.01341],[9.28364,46.01324],[9.28272,46.01239],[9.28294,46.01086],[9.28158,46.01010],[9.28268,46.00935],[9.28693,46.00860],[9.29105,46.00479],[9.29190,46.00282],[9.29211,45.99750],[9.29074,45.99409],[9.29197,45.99054],[9.29212,45.98680],[9.29425,45.98503],[9.29692,45.98111],[9.29710,45.97854],[9.29586,45.97681],[9.30324,45.96721],[9.30206,45.96616],[9.30053,45.96590],[9.30097,45.96478],[9.30133,45.96556],[9.30174,45.96466],[9.30066,45.96242],[9.30055,45.95916],[9.30175,45.95696],[9.30081,45.95363],[9.30099,45.94937],[9.30357,45.94814],[9.30515,45.94607],[9.30876,45.94438],[9.31255,45.94022],[9.31272,45.93527],[9.31206,45.93263],[9.31082,45.93162],[9.31223,45.92968],[9.31007,45.92472],[9.31173,45.91822],[9.31309,45.91692],[9.31261,45.91435],[9.31365,45.91381],[9.31303,45.91290],[9.31575,45.91296],[9.31768,45.91167],[9.31923,45.91143],[9.32424,45.91181],[9.32577,45.91075],[9.32578,45.90971],[9.32709,45.90883],[9.32874,45.90532],[9.33031,45.90409],[9.33147,45.89964],[9.33030,45.89751],[9.33346,45.89368],[9.33960,45.89416],[9.34328,45.89572],[9.34519,45.89588],[9.35255,45.89324],[9.35787,45.88974],[9.36099,45.88447],[9.37036,45.87942],[9.37182,45.87735],[9.37663,45.87517],[9.37837,45.86806],[9.38163,45.86596],[9.38312,45.86039],[9.38515,45.85865],[9.38376,45.85700],[9.38893,45.85501],[9.38648,45.85258],[9.38654,45.85196],[9.38724,45.85249],[9.38664,45.85124],[9.38767,45.84961],[9.38722,45.84833],[9.38043,45.85029],[9.37544,45.85265],[9.37458,45.85398],[9.37480,45.85611],[9.37174,45.85813],[9.36998,45.85776],[9.36951,45.85851],[9.36738,45.85886],[9.36695,45.85816],[9.36625,45.85836],[9.36557,45.86470],[9.36279,45.86832],[9.35826,45.87205],[9.35682,45.87481],[9.35461,45.87529],[9.34647,45.87996],[9.34090,45.88103],[9.33697,45.88290],[9.33417,45.88324],[9.33202,45.88464],[9.32846,45.88445],[9.32435,45.88518],[9.31772,45.89079],[9.31527,45.89151],[9.31075,45.89839],[9.30795,45.89917],[9.30163,45.90264],[9.29964,45.90610],[9.29678,45.90910],[9.29467,45.91001],[9.29338,45.91493],[9.28987,45.91861],[9.28571,45.92551],[9.28614,45.92779],[9.28461,45.93119],[9.28478,45.93318],[9.28261,45.93517],[9.28228,45.94072],[9.27921,45.94400],[9.27584,45.95412],[9.27430,45.95557],[9.27364,45.95512],[9.27426,45.95559],[9.27197,45.95645],[9.26974,45.95913],[9.26626,45.96167],[9.26638,45.96345],[9.26795,45.96468],[9.26822,45.96804],[9.26988,45.97045],[9.26829,45.97174],[9.26769,45.97439],[9.26623,45.97495],[9.26553,45.98002],[9.26409,45.98169]]],
+  inner: [[[9.37230,46.16725],[9.37319,46.16776],[9.37230,46.16725]],[[9.17364,45.96464],[9.17962,45.96610],[9.17788,45.96439],[9.17614,45.96380],[9.17380,45.96391],[9.17297,45.96438],[9.17364,45.96464]]] };
+SW.LAKES_EXTRA.sempachersee = { name: 'Sempachersee', bbox: [8.12126, 47.1179, 8.19199, 47.17377],
+  outer: [[[8.12608,47.17363],[8.12753,47.17265],[8.12635,47.17193],[8.12712,47.17104],[8.12869,47.17131],[8.13011,47.17264],[8.13072,47.17170],[8.13169,47.17202],[8.13382,47.17097],[8.13395,47.16981],[8.13539,47.16937],[8.13555,47.16864],[8.13973,47.16837],[8.14092,47.16662],[8.14239,47.16631],[8.14852,47.16071],[8.15324,47.15810],[8.15456,47.15627],[8.16507,47.15118],[8.16698,47.14886],[8.16813,47.14833],[8.16944,47.14879],[8.18169,47.14218],[8.18877,47.13567],[8.19199,47.12983],[8.19177,47.12795],[8.19068,47.12659],[8.18898,47.12559],[8.18724,47.12544],[8.18687,47.12426],[8.18580,47.12388],[8.18670,47.12200],[8.18418,47.11930],[8.18184,47.11802],[8.18101,47.11842],[8.17889,47.11790],[8.17583,47.11951],[8.17252,47.12001],[8.16693,47.12433],[8.16131,47.12620],[8.15993,47.12775],[8.15616,47.12833],[8.15103,47.13234],[8.14776,47.13346],[8.14255,47.13705],[8.14070,47.13750],[8.12410,47.15165],[8.12281,47.15505],[8.12404,47.15690],[8.12365,47.15998],[8.12126,47.16229],[8.12242,47.16281],[8.12278,47.16610],[8.12442,47.16848],[8.12315,47.16996],[8.12391,47.17023],[8.12560,47.16930],[8.12628,47.16990],[8.12209,47.17253],[8.12420,47.17377],[8.12608,47.17363]]],
+  inner: [[[8.12649,47.16808],[8.12666,47.16767],[8.12649,47.16808]]] };
+
 /* ---- js/router.js ---- */
 /* Freie Routensuche auf dem See: schnellster Weg von Start zu Ziel bei dem Wind, der unterwegs herrscht.
    Gitter über die Wasserfläche, 16 Fahrtrichtungen, echter Bootsspeed aus der Polare (kein Fahren im toten Winkel),
@@ -2543,6 +2573,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 
   /* ---------- Icons (24×24, Strich) ---------- */
   const I = {
+    cam: '<rect x="3" y="7" width="14" height="11" rx="1.5"/><path d="M17 11l4-2.5v8L17 14"/><circle cx="10" cy="12.5" r="2.6"/>',
     surf: '<path d="M4 19h16"/><path d="M12 4v14"/><path d="M12 5c3 2 4.5 6 4 11h-4"/><path d="M12 7c-2.5 2-3.5 5.5-3 9h3"/>',
     archiv: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9"/><path d="M10 13h4"/>',
     edit: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
@@ -2780,7 +2811,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   };
   // Auswahl der Sportart (Chips)
   // Sportarten des aktiven Modus (ohne Flusswelle, die hat Abfluss statt Wind)
-  L.modeSports = () => { const l = SW.mode().sports.filter(k => k !== 'welle' && SW.settings.sports[k]); return l.length ? l : ['foil']; };
+  L.modeSports = () => { const l = SW.mode().sports.filter(k => k !== 'welle' && SW.settings.sports[k]); return l.length ? l : ['windsurf']; };
   L.sportKey = () => { const l = L.modeSports(); return l.includes(SW.settings.sport) ? SW.settings.sport : l[0]; };
   L.sport = () => SW.settings.sports[L.sportKey()];
   L.sportChips = function (cur, onPick) {
@@ -3270,6 +3301,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
           <span class="sail-btns">
             <button class="btn primary" type="button" data-a="gps">GPS starten</button>
             <button class="btn theme-cyc" type="button" data-a="theme" title="Lichtmodus wechseln">${{ dark: '◐ Dunkel', sun: '☀ Hell', night: '● Nacht' }[SW.settings.theme] || '◐ Dunkel'}</button>
+            <button class="btn full-btn" type="button" data-a="full">${document.documentElement.classList.contains('sail-full') ? '⤡ Vollbild aus' : '⤢ Vollbild'}</button>
             <button class="btn menu-btn" type="button" data-a="menu">☰ Menü</button></span></div>
         <p class="sail-basis" data-k="basis"></p>
       </section>`);
@@ -3494,6 +3526,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const a = e.target.closest('[data-a]'); if (!a) return;
         if (a.dataset.a === 'gps') { SW.regatta.timer.unlockAudio(); LV.start(); }
         if (a.dataset.a === 'menu') menuSheet();
+        if (a.dataset.a === 'full') { toggleFull(); a.textContent = document.documentElement.classList.contains('sail-full') ? '⤡ Vollbild aus' : '⤢ Vollbild'; }   // eigener Knopf, ein Tipp
         if (a.dataset.a === 'theme') { const order = ['dark', 'sun', 'night'], nx = order[(order.indexOf(SW.settings.theme) + 1) % 3]; SW.saveSettings({ theme: nx }); SW.app.applyTheme(); ui.toast(ui.themeName(nx)); }
       };
       paint();
@@ -3507,7 +3540,6 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       ['gps', LV.running ? 'GPS stoppen' : 'GPS starten', LV.running ? 'Speed, Kurs und Position ausschalten' : 'Speed, Kurs und Position vom iPad'],
       ['timer', T.cfg().show ? 'Regatta-Timer ausblenden' : 'Regatta-Timer zeigen', 'Countdown mit Signaltönen, Abstand zur Startlinie'],
       ['inst', 'Windgeber verbinden', SW.inst.live() ? 'verbunden – Einstellungen ändern' : 'Signal K (WLAN), USB-Adapter oder Demo'],
-      ['full', full ? 'Vollbild beenden' : 'Vollbild', 'Kopfzeile und Navigation ausblenden, Bildschirm bleibt an']
     ].concat(nav ? [['stop', 'Route beenden', `«${nav.name || 'Route'}» nicht mehr verfolgen`]] : []);
     const el = U.el(`<div class="sail-menu-wrap"><h3 class="sub-h">Lichtmodus</h3><div class="chips sail-themes">${ui.THEMES.map(t => `<button type="button" class="chip ${SW.settings.theme === t.id ? 'on' : ''}" data-th="${t.id}">${U.esc(t.name)}</button>`).join('')}</div><div class="model-list sail-menu">${rows.map(([k, t, s]) => `<button type="button" class="model-row ${k === 'stop' ? 'danger' : ''}" data-m="${k}"><b>${U.esc(t)}</b><span>${U.esc(s)}</span></button>`).join('')}</div></div>`);
     const sh = ui.sheet('Segelscreen', el);
@@ -3533,7 +3565,10 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     try { if (on && req) { const p = req.call(h); if (p && p.catch) p.catch(() => {}); } else if (!on && (document.fullscreenElement || document.webkitFullscreenElement) && exit) exit.call(document); } catch (e) { /* nicht unterstützt: CSS-Vollbild reicht */ }
     if (on && SW.live.wakeSupported()) SW.live.setWake(true);           // im Vollbild Bildschirm wach halten
   }
-  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.documentElement.classList.remove('sail-full'); });
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) document.documentElement.classList.remove('sail-full');
+    const b = document.querySelector('.sail-bar [data-a="full"]'); if (b) b.textContent = document.documentElement.classList.contains('sail-full') ? '⤡ Vollbild aus' : '⤢ Vollbild';
+  });
 
   // Verbindung zum Windgeber einstellen
   function instSheet() {
@@ -3970,15 +4005,15 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const { data, meta } = await p;
         const ids = C.models.map(m => m.id).filter(id => data.models[id].wind_speed_10m && data.models[id].wind_speed_10m.some(U.isNum));
         const st = stats(data, ids, 'wind_speed_10m');
-        let shown = new Set([SW.settings.model]);
+        let shown = new Set(ids);                                    // standardmässig alle Modelle sichtbar
         const draw = () => {
           const series = [{ label: 'Median', values: st.med, color: 'var(--accent)', width: 2.6, unit: 'kt', band: { lo: st.lo, hi: st.hi }, bandOpacity: 0.22 }];
           ids.forEach((id, k) => { if (shown.has(id)) series.push({ label: SW.api.modelInfo(id).label, values: data.models[id].wind_speed_10m, color: COLORS[k % COLORS.length], width: 1.3, unit: 'kt' }); });
           body.innerHTML = '<div class="chart-host"></div><div class="chips small" data-noswipe></div>';
           SW.chart(body.firstChild, { t: data.t, height: 280, axes: { l: { min: 0, unit: 'kt' } }, series, thresholds: [{ y: SW.load.sport().min, label: `${SW.load.sport().label} ab ${SW.load.sport().min} kt`, color: 'var(--ok)' }] });
           const chips = body.querySelector('.chips');
-          chips.innerHTML = ids.map((id, k) => `<button type="button" class="chip ${shown.has(id) ? 'on' : ''}" data-id="${id}"><i style="background:${COLORS[k % COLORS.length]}"></i>${U.esc(SW.api.modelInfo(id).label)}</button>`).join('');
-          chips.onclick = e => { const b = e.target.closest('.chip'); if (!b) return; shown.has(b.dataset.id) ? shown.delete(b.dataset.id) : shown.add(b.dataset.id); draw(); };
+          chips.innerHTML = `<button type="button" class="chip ${shown.size === ids.length ? 'on' : ''}" data-all="1">Alle</button>` + ids.map((id, k) => `<button type="button" class="chip ${shown.has(id) ? 'on' : ''}" data-id="${id}"><i style="background:${COLORS[k % COLORS.length]}"></i>${U.esc(SW.api.modelInfo(id).label)}</button>`).join('');
+          chips.onclick = e => { const b = e.target.closest('.chip'); if (!b) return; if (b.dataset.all) { shown = shown.size === ids.length ? new Set() : new Set(ids); draw(); return; } shown.has(b.dataset.id) ? shown.delete(b.dataset.id) : shown.add(b.dataset.id); draw(); };
         };
         draw();
         return meta;
@@ -5283,18 +5318,15 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 })();
 
 /* ---- js/pages/karte.js ---- */
-/* Seite «Karte»: Windy-Windkarte und Webcams mit echtem Ladezustand und Vollbild. */
+/* Seite «Karte»: Windy-Windkarte. Webcams: eigene Seite «Webcams» (nur Links, keine fremden Bilder). */
 (function () {
   const U = SW.util, C = SW.CONFIG, L = SW.load, ui = SW.ui;
-  let camTimer = null;
 
   SW.page('karte', {
     label: 'Karte', icon: 'karte',
-    leave() { clearInterval(camTimer); camTimer = null; },             // beim Verlassen keine Bilder mehr nachladen
     async render(root) {
       const cMap = ui.card({ id: 'c-map', title: 'Live-Windkarte', skeleton: 'none' });
-      const cCam = ui.card({ id: 'c-cams', title: 'Webcams', sub: 'Bild antippen für Vollbild. Bilder kommen direkt von den Betreibern und werden alle 5 Minuten neu geladen, solange diese Seite offen ist.', skeleton: 'none' });
-      root.appendChild(cMap); root.appendChild(cCam);
+      root.appendChild(cMap);
       const mb = cMap.querySelector('.card-b');
       let view = 0;
       const drawMap = () => {
@@ -5304,53 +5336,82 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       };
       drawMap();
 
-      const cb = cCam.querySelector('.card-b');
-      cb.innerHTML = `<div class="cams">${C.webcams.map(c => `<figure class="cam" data-id="${c.id}">
-          <div class="cam-img"><img alt="Webcam ${U.esc(c.name)}" decoding="async"><div class="cam-ph">Lade Bild…</div></div>
-          <figcaption><b>${U.esc(c.name)}</b><span class="cam-t">–</span>${c.note ? `<small>${U.esc(c.note)}</small>` : ''}</figcaption></figure>`).join('')}</div>`;
-      const load = () => C.webcams.forEach(c => loadCam(cb.querySelector(`[data-id="${c.id}"]`), c));
-      load();
-      clearInterval(camTimer);
-      camTimer = setInterval(load, C.webcamRefreshMinutes * 60000);
-      cb.addEventListener('click', e => {
-        const f = e.target.closest('.cam'); if (!f) return;
-        const img = f.querySelector('img'); if (!img.dataset.ok) return;
-        const box = U.el(`<div class="lightbox" role="dialog" aria-label="Webcam Vollbild"><img src="${img.src}" alt="${U.esc(img.alt)}"><button class="icon-btn" type="button" aria-label="Schliessen">${ui.icon('close')}</button><span>${U.esc(f.querySelector('b').textContent)} · ${U.esc(f.querySelector('.cam-t').textContent)}</span></div>`);
-        box.onclick = () => box.remove();
-        document.body.appendChild(box);
-      });
     }
   });
 
-  // Bild laden; Zeitstempel nur bei Erfolg, sonst Platzhalter. Fallback-URL wird einmal versucht.
-  function loadCam(fig, c, useFallback) {
-    const img = fig.querySelector('img'), ph = fig.querySelector('.cam-ph'), ts = fig.querySelector('.cam-t');
-    const src = (useFallback ? c.fallback : c.src);
-    const probe = new Image();
-    probe.onload = () => {
-      img.src = probe.src; img.dataset.ok = '1'; ph.hidden = true; fig.classList.remove('bad');
-      ts.textContent = `Geladen ${U.hhmm(Date.now() / 1000)}`;
-    };
-    probe.onerror = () => {
-      if (!useFallback && c.fallback) return loadCam(fig, c, true);
-      fig.classList.add('bad'); ph.hidden = false;
-      ph.textContent = navigator.onLine === false ? 'Offline – kein Bild' : 'Bild nicht erreichbar';
-      if (!img.dataset.ok) ts.textContent = 'nicht geladen';
-      else ts.textContent += ' (Aktualisierung fehlgeschlagen)';
-    };
-    probe.src = src + (src.includes('?') ? '&' : '?') + 't=' + Math.floor(Date.now() / 60000); // Cache-Brecher pro Minute
-  }
+})();
+
+/* ---- js/pages/webcams.js ---- */
+/* Seite «Webcams»: Karte mit den Standorten, antippen öffnet die Webcam beim Betreiber.
+   Die Bilder werden bewusst NICHT in die App eingebettet – sie gehören den Betreibern. */
+(function () {
+  const U = SW.util, C = SW.CONFIG, ui = SW.ui;
+  let map = null;
+  const drop = () => { if (map) { try { map.off(); map.remove(); } catch (e) { /* schon weg */ } map = null; } };
+
+  const links = c => `<a class="btn primary" href="${U.esc(c.url)}" target="_blank" rel="noopener noreferrer">Webcam öffnen ↗</a>${c.site ? `<a class="btn" href="${U.esc(c.site)}" target="_blank" rel="noopener noreferrer">Website ↗</a>` : ''}`;
+
+  SW.page('webcams', {
+    label: 'Webcams', icon: 'cam',
+    leave: drop,
+    render(root) {
+      drop();
+      const cMap = ui.card({ id: 'c-cammap', cls: 'hero', title: 'Webcams an den Revieren', skeleton: 'none' });
+      const cList = ui.card({ id: 'c-camlist', title: 'Alle Webcams', skeleton: 'none' });
+      root.appendChild(cMap); root.appendChild(cList);
+      const mb = cMap.querySelector('.card-b');
+      mb.innerHTML = `<div id="cam-map" class="cam-map" data-noswipe></div>
+        <p class="hint" style="display:block">Punkt antippen → «Webcam öffnen». Das Bild öffnet sich beim Betreiber in einem neuen Fenster; die App zeigt keine fremden Bilder an. Standorte ungefähr. Oben links einen See wählen zum Hineinzoomen.</p>`;
+      // Liste: gleiche Links ohne Karte (auch offline lesbar)
+      const byRev = {};
+      ['Vierwaldstättersee', 'Urnersee', 'Zugersee', 'Sempachersee', 'Comersee'].forEach(a => { const l = C.webcams.filter(c => c.area === a); if (l.length) byRev[a] = l; });   // Liste nach See geordnet
+      cList.querySelector('.card-b').innerHTML = `<div class="cam-list">${Object.keys(byRev).map(a => `<div class="cam-group"><h3 class="sub-h">${U.esc(a)}</h3>${byRev[a].map(c =>
+        `<div class="cam-row"><div><b>${U.esc(c.name)}</b><span>${U.esc(c.op)}</span></div><div class="row-btns">${links(c)}</div></div>`).join('')}</div>`).join('')}</div>`;
+
+      if (!window.L) { mb.querySelector('#cam-map').innerHTML = ui.note('Karte nicht verfügbar', 'warn'); return; }
+      const el = mb.querySelector('#cam-map');
+      setTimeout(() => {
+        if (!el.isConnected) return;
+        map = window.L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: false, zoomSnap: 0.25 });
+        SW.lakeMap(map);                                                // gleicher Stil wie die übrigen Karten: nur Seen, keine fremden Kacheln
+        const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+        const all = Object.assign({}, SW.LAKES_EXTRA || {});
+        Object.keys(all).forEach(id => {                                // zusätzliche Seen nur für diese Karte (Comersee, Sempachersee)
+          const lk = all[id], rings = lk.outer.concat(lk.inner).map(r => r.map(p => [p[1], p[0]]));
+          window.L.polygon(rings, { color: css('--lake-line'), weight: 1.5, fillColor: css('--lake'), fillOpacity: 0.28, interactive: false }).addTo(map);
+        });
+        Object.entries(Object.assign({}, SW.LAKES, all)).forEach(([id, lk]) => {   // Seenamen als Beschriftung
+          window.L.marker([(lk.bbox[1] + lk.bbox[3]) / 2, (lk.bbox[0] + lk.bbox[2]) / 2], { interactive: false, icon: window.L.divIcon({ className: 'lake-label', html: `<span>${U.esc(lk.name)}</span>`, iconSize: [140, 18], iconAnchor: [70, -14] }) }).addTo(map);
+        });
+        const pts = [];
+        C.webcams.forEach(c => {
+          const m = window.L.marker([c.lat, c.lon], { icon: window.L.divIcon({ className: 'cam-pin', html: `<span>${ui.icon('cam')}</span>`, iconSize: [36, 36], iconAnchor: [18, 18] }) }).addTo(map);
+          m.bindTooltip(c.name);
+          m.bindPopup(U.el(`<div class="mk-pop"><b>${U.esc(c.name)}</b><span>${U.esc(c.op)}</span>${links(c)}</div>`), { className: 'mk-popup', minWidth: 200 });
+          pts.push([c.lat, c.lon]);
+        });
+        const areas = { alle: pts };                                    // Ausschnitte: alle oder ein See
+        const ORDER = ['Vierwaldstättersee', 'Urnersee', 'Zugersee', 'Sempachersee', 'Comersee'];   // feste Reihenfolge der Ausschnitte
+        C.webcams.slice().sort((a, b) => ORDER.indexOf(a.area) - ORDER.indexOf(b.area)).forEach(c => { (areas[c.area] = areas[c.area] || []).push([c.lat, c.lon]); });
+        const fit = a => map.fitBounds(areas[a], { padding: [50, 50], maxZoom: 12.5, animate: false });
+        fit('alle');
+        const chips = U.el(`<div class="chips small map-lakes cam-areas" data-noswipe>${Object.keys(areas).map(a => `<button type="button" class="chip ${a === 'alle' ? 'on' : ''}" data-a="${U.esc(a)}">${a === 'alle' ? 'Alle' : U.esc(a)}</button>`).join('')}</div>`);
+        chips.onclick = e => { const b = e.target.closest('[data-a]'); if (!b) return; chips.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); fit(b.dataset.a); };
+        window.L.DomEvent.disableClickPropagation(chips); el.appendChild(chips);
+      }, 30);
+    }
+  });
 })();
 
 /* ---- js/pages/gruppen.js ---- */
 /* Sammelseiten mit Unterreitern: weniger Knöpfe in der Navigation.
-   «Routen» = Routenplaner · Wetter Gelbes Band · Archiv, «Wetter» = Wetterlagen · Karte.
+   «Routen» = Planer · Archiv, «Wetter» = Grosswetterlagen · Wetterlage Gelbes Band (nicht im Modus Windsurf).
    Die bisherigen Seiten bleiben als Unterseiten erhalten (alte Links wie #band funktionieren weiter). */
 (function () {
   const U = SW.util;
   const GROUPS = {
-    routen: { label: 'Routen', icon: 'band', key: 'routenTab', tabs: [['band', 'Planer'], ['gbwetter', 'Wetter Gelbes Band'], ['archiv', 'Archiv']] },
-    wetter: { label: 'Wetter', icon: 'lagen', key: 'wetterTab', tabs: [['lagen', 'Wetterlagen'], ['karte', 'Karte & Webcams']] }
+    routen: { label: 'Routen', icon: 'band', key: 'routenTab', tabs: [['band', 'Planer'], ['archiv', 'Archiv']] },
+    wetter: { label: 'Wetter', icon: 'lagen', key: 'wetterTab', tabs: [['lagen', 'Grosswetterlagen'], ['gbwetter', 'Wetterlage Gelbes Band', () => SW.settings.mode !== 'windsurf']] }
   };
   SW.GROUPS = GROUPS;
   const subPage = id => SW.pages.find(p => p.id === id);
@@ -5365,11 +5426,12 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       label: G.label, icon: G.icon,
       leave() { const p = subPage(active); if (p && p.leave) p.leave(); active = null; },
       async render(root) {
-        const tab = G.tabs.some(t => t[0] === SW.settings[G.key]) ? SW.settings[G.key] : G.tabs[0][0];
+        const tabs = G.tabs.filter(t => !t[2] || t[2]());                // Unterreiter je nach Modus (z. B. ohne Gelbes Band beim Windsurfen)
+        const tab = tabs.some(t => t[0] === SW.settings[G.key]) ? SW.settings[G.key] : tabs[0][0];
         const prev = subPage(active);
         if (prev && active !== tab && prev.leave) prev.leave();          // Unterreiter gewechselt: alte Unterseite aufräumen
         active = tab;
-        const bar = U.el(`<div class="subtabs group-tabs" role="tablist" data-noswipe>${G.tabs.map(([id, l]) => `<button type="button" role="tab" class="subtab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-t="${id}">${U.esc(l)}</button>`).join('')}</div>`);
+        const bar = U.el(`<div class="subtabs group-tabs" role="tablist" data-noswipe>${tabs.length < 2 ? '' : tabs.map(([id, l]) => `<button type="button" role="tab" class="subtab ${id === tab ? 'on' : ''}" aria-selected="${id === tab}" data-t="${id}">${U.esc(l)}</button>`).join('')}</div>`);
         bar.onclick = e => { const b = e.target.closest('.subtab'); if (!b || b.dataset.t === active) return; SW.saveSettings({ [G.key]: b.dataset.t }); SW.app.show(gid, true); };
         root.appendChild(bar);
         root.classList.add('page-' + tab);                               // Stile der Unterseite gelten weiter
@@ -5425,7 +5487,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     const PAGES = SW.pages.filter(p => p.id !== 'setup' && !p.sub);   // Unterreiter nicht einzeln
     const allCards = Object.keys(C.heuteCards);
     const order = m.cards.concat(allCards.filter(c => !m.cards.includes(c)));   // eingeblendete zuerst, Rest dahinter
-    const wind = ['foil', 'windsurf', 'kite', 'segeln'];
+    const wind = ['windsurf', 'segeln'];
     b.innerHTML = `<div class="chips" role="radiogroup" aria-label="Modus wählen">${Object.keys(S.modes).map(x => `<button type="button" class="chip ${x === k ? 'on' : ''}" data-m="${x}">${U.esc(S.modes[x].label)}${x === S.mode ? ' ●' : ''}</button>`).join('')}</div>
       <h3 class="sub-h">Seiten</h3>
       <div class="toggles">${PAGES.map(p => `<label class="toggle"><input type="checkbox" data-page="${p.id}" ${m.pages.includes(p.id) ? 'checked' : ''} ${p.id === 'heute' && m.pages.includes('heute') && m.pages.length === 1 ? 'disabled' : ''}><span>${U.esc(p.setupLabel || p.label)}</span></label>`).join('')}</div>
@@ -5586,14 +5648,15 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       <dl class="info">
         <dt>Version</dt><dd>${U.esc(C.version)}</dd>
         <dt>Wetter</dt><dd>Open-Meteo.com (CC BY 4.0), Modelle: ${C.models.map(m => U.esc(m.label)).join(', ')}</dd>
-        <dt>Abfluss & Pegel</dt><dd>BAFU Hydrologie via api.existenz.ch, Prognose GloFAS via Open-Meteo Flood API</dd>
-        <dt>Karten</dt><dd>Windy.com (Embed), Leaflet (BSD-2)</dd>
-        <dt>Uferlinien</dt><dd>Vierwaldstättersee und Zugersee © OpenStreetMap-Mitwirkende (ODbL), vereinfacht auf ~20 m</dd>
+        <dt>Abfluss & Pegel</dt><dd>Messwerte: Quelle BAFU (Bundesamt für Umwelt), abgerufen über api.existenz.ch. Abflussprognose: GloFAS über die Open-Meteo Flood API. Enthält Informationen des Copernicus-Dienstes (Copernicus Emergency Management Service, GloFAS).</dd>
+        <dt>Karten</dt><dd>Windy.com (Embed), Webcam-Karte: eigene Seeumrisse (Vierwaldstätter-, Zuger-, Sempacher-, Comersee) © OpenStreetMap-Mitwirkende, ODbL, Leaflet (BSD-2)</dd>
+        <dt>Webcams</dt><dd>Nur Links zu den Betreibern bzw. ihren Seiten (u. a. Surfclub Urnersee, Bootshaus Sisikon, Camping Domaso, Windsurfclub Eich, Luzern Tourismus, SGV, Weggis Vitznau Rigi Tourismus, foto-webcam.eu, Yachtclub Zug, Stadt Zug, Segelclub Cham, Windy.com). Die Bilder gehören den Betreibern und werden nicht in der App angezeigt.</dd>
+        <dt>Uferlinien</dt><dd>Vierwaldstättersee und Zugersee © OpenStreetMap-Mitwirkende, vereinfacht auf ~20 m. Die abgeleiteten Uferlinien-Daten stehen unter der Open Database License (ODbL 1.0, opendatacommons.org/licenses/odbl).</dd>
         <dt>QR-Code</dt><dd>qrcode-generator von Kazuhiko Arase (MIT)</dd>
         <dt>Schrift</dt><dd>Barlow Condensed, SIL Open Font License</dd>
         <dt>Cache</dt><dd>Daten ${C.cache.ttlMinutes} min frisch, offline bis ${C.cache.maxAgeDays} Tage gespeichert. Es wird nur die sichtbare Seite geladen.</dd>
         <dt>Rechtliches</dt><dd>Nicht-kommerzielle Privatanwendung von Philippe Becker. Alle Angaben sind Modellprognosen und Faustregeln ohne Gewähr – keine offizielle Warnung. Massgebend sind MeteoSchweiz und der Sturmwarndienst der Seen.</dd>
-        <dt>Datenschutz</dt><dd>Kein Login, keine Analyse, keine Cookies. Einstellungen bleiben im Browser dieses Geräts. Abfragen gehen direkt an die genannten Dienste.</dd>
+        <dt>Datenschutz</dt><dd>Kein Konto, keine Analyse, keine Cookies, keine Werbung. Profile, Favoriten, Strecken und GPS-Spur bleiben im Browser dieses Geräts. Für Prognosen schickt die App Koordinaten (Spots, Reviere, bei «Wind hier» der eigene Standort auf ~1 km gerundet) an Open-Meteo.com; für Abfluss und Pegel Stationsnummern an api.existenz.ch. Die App selbst liegt bei GitHub Pages. Diese Dienste sehen dabei – wie jede Webseite – die IP-Adresse des Geräts. Karten und Webcams laden beim Öffnen Inhalte von Windy.com, OpenStreetMap bzw. den Webcam-Betreibern.</dd>
       </dl>`;
     b.querySelector('#d-clear').onclick = async () => { await SW.cache.clear(); ui.toast('Cache geleert'); };
     b.querySelector('#d-sim').onclick = () => { SW.api.simulateError = !SW.api.simulateError; ui.toast(SW.api.simulateError ? 'Simulation aktiv: alle Abfragen schlagen fehl, gespeicherte Daten erscheinen mit Hinweis' : 'Simulation aus'); dataCard(b); };

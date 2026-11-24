@@ -1,6 +1,6 @@
 /* Service Worker: App-Shell offline. Wetterdaten cacht die App selbst (IndexedDB), darum hier nur eigene Dateien. */
-const VERSION = 'sw24-b75c853a13';                                          // build.py ersetzt dies durch einen Inhalts-Hash
-const ASSETS = ["./", "index.html", "manifest.webmanifest", "css/app.b75c853a13.css", "js/app.b75c853a13.js", "assets/fonts/barlow-condensed-500.woff2", "assets/fonts/barlow-condensed-600.woff2", "assets/fonts/barlow-condensed-700.woff2", "assets/icons/apple-touch-icon.png", "assets/icons/icon-192.png", "assets/icons/icon-512.png", "assets/icons/icon-maskable-512.png", "assets/icons/icon.svg"];
+const VERSION = 'sw24-c8896b18d1';                                          // build.py ersetzt dies durch einen Inhalts-Hash
+const ASSETS = ["./", "index.html", "manifest.webmanifest", "css/app.c8896b18d1.css", "js/app.c8896b18d1.js", "assets/fonts/barlow-condensed-500.woff2", "assets/fonts/barlow-condensed-600.woff2", "assets/fonts/barlow-condensed-700.woff2", "assets/icons/apple-touch-icon.png", "assets/icons/icon-192.png", "assets/icons/icon-512.png", "assets/icons/icon-maskable-512.png", "assets/icons/icon.svg"];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));   // alles vorladen

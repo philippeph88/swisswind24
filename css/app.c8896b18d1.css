@@ -1595,3 +1595,21 @@ html[data-theme="night"] iframe, html[data-theme="night"] .leaflet-tile, html[da
 .here-best { margin: 0 0 8px; color: var(--fg-1); }
 .here-tl { min-width: 0; }
 @media (max-width: 900px) { .here { grid-template-columns: 1fr; } }
+
+/* Webcams: Karte mit Standorten, Links statt Bilder */
+.cam-map { height: 520px; border: 1px solid var(--line); background: var(--bg-2); }
+@media (orientation: portrait) { .cam-map { height: 55vh; } }
+.cam-pin span { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.cam-pin svg { width: 20px; height: 20px; }
+.cam-list { display: grid; gap: 14px; }
+.cam-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.cam-row b { display: block; font: 700 17px var(--cond); color: var(--fg-0); } .cam-row span { font-size: 13.5px; color: var(--fg-2); }
+.mk-pop a.btn { width: 100%; justify-content: center; min-height: 46px; }
+#topbar { z-index: 1200; }                                  /* Kopfzeile über Leaflet-Bedienelementen (z 1000) */
+#nav { z-index: 1150; }
+.mk-pop a.btn, .cam-row a.btn { text-decoration: none; }
+.mk-pop a.btn.primary { color: var(--accent-ink); }
+.full-btn { min-width: 128px; justify-content: center; font-weight: 700; }
+.cam-map { position: relative; }
+.cam-areas { top: 10px; bottom: auto !important; left: 56px !important; }
+.lake-label span { display: block; text-align: center; font: 600 11.5px var(--cond); letter-spacing: .12em; text-transform: uppercase; color: var(--fg-2); white-space: nowrap; text-shadow: 0 0 3px var(--bg-0); }

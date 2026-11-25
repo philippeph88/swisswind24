@@ -12,7 +12,7 @@ window.SW = window.SW || {};
 
 SW.CONFIG = {
   appName: 'SwissWind24',
-  version: '2.16.0',                                   // wird von tools/build.py in den Service Worker übernommen
+  version: '2.18.0',                                   // wird von tools/build.py in den Service Worker übernommen
   timeZone: 'Europe/Zurich',                          // alle Zeiten werden in Zürcher Zeit gerechnet und angezeigt
 
   /* ---------- Cache und Laden ---------- */
@@ -2573,6 +2573,22 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 
   /* ---------- Icons (24×24, Strich) ---------- */
   const I = {
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    contrast: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>',
+    expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+    shrink: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
+    move: '<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
+    fit: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+    lock: '<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    swap: '<path d="M4 8h15l-4-4M20 16H5l4 4"/>',
+    ext: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+    chevdown: '<path d="M6 9l6 6 6-6"/>',
+    chevup: '<path d="M6 15l6-6 6 6"/>',
+    arrowright: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     cam: '<rect x="3" y="7" width="14" height="11" rx="1.5"/><path d="M17 11l4-2.5v8L17 14"/><circle cx="10" cy="12.5" r="2.6"/>',
     surf: '<path d="M4 19h16"/><path d="M12 4v14"/><path d="M12 5c3 2 4.5 6 4 11h-4"/><path d="M12 7c-2.5 2-3.5 5.5-3 9h3"/>',
     archiv: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9"/><path d="M10 13h4"/>',
@@ -2597,7 +2613,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>', trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
     full: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'
   };
-  ui.icon = (k, cls) => `<svg class="ic ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round">${I[k] || ''}</svg>`;
+  ui.icon = (k, cls) => `<svg class="ic ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round">${I[k] || ''}</svg>`;
 
   /* ---------- Lichtmodi ---------- */
   ui.THEMES = [
@@ -2646,7 +2662,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       const metas = await loader(body);
       ui.stamp(foot, [].concat(metas || []).filter(Boolean));
       card.classList.remove('is-error');
-      if (body.querySelector('.hint')) ui.addInfo(card);
+      const hintLen = Array.from(body.querySelectorAll('.hint')).reduce((n, h) => n + h.textContent.trim().length, 0);
+      if (hintLen >= 60) ui.addInfo(card);                               // «i» nur bei echter Erklärung
+      else body.querySelectorAll('.hint').forEach(h => h.classList.add('hint-short'));   // kurze Hinweise direkt zeigen
     } catch (err) {
       console.warn('[SwissWind24]', card.id || '', err);
       card.classList.add('is-error');
@@ -2663,10 +2681,10 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     const old = Date.now() - oldest > C.cache.staleWarnMinutes * 60000;
     const err = metas.find(m => m.error);
     const model = metas.find(m => m.model);
-    foot.innerHTML = `<span class="stand ${old ? 'old' : ''}">Stand ${U.hhmm(oldest / 1000)} · ${U.ago(oldest)}</span>
+    const note = model ? ui.modelNote(model) : '';                    // nur, wenn ein anderes Modell einspringen musste
+    foot.innerHTML = old || err || note ? `${old || err ? `<span class="stand ${old ? 'old' : ''}">Stand ${U.hhmm(oldest / 1000)} · ${U.ago(oldest)}</span>` : ''}
       ${old ? '<span class="badge warn">Daten älter als 1 h</span>' : ''}
-      ${err ? `<span class="badge bad">Offline/Fehler: zeige gespeicherte Daten</span>` : ''}
-      ${model ? ui.modelNote(model) : ''}`;
+      ${err ? `<span class="badge bad">Offline/Fehler: zeige gespeicherte Daten</span>` : ''}${note}` : '';   // sonst steht der Stand einmal oben in der Kopfzeile
   };
   // Welches Modell wurde wirklich genutzt?
   ui.modelNote = function (meta, onlyVars) {
@@ -2683,6 +2701,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         else if (!s.prim && s.fb && f && k !== 'wind_speed_10m') parts.push(`${U.esc(SW.api.VAR_LABEL[k] || k)} aus ${U.esc(f.label)}`);
       });
     }
+    const w0 = meta.src && meta.src.wind_speed_10m, missing = meta.src && Object.keys(meta.src).some(k => (!onlyVars || onlyVars.includes(k)) && meta.src[k].missing);
+    if (!(w0 && (!w0.prim || w0.fb)) && !missing) return '';            // Normalfall (Wind aus dem gewählten Modell): steht oben in der Kopfzeile
     return `<span class="model-note">Modell: ${parts.join(' · ')}</span>`;
   };
 
@@ -2872,7 +2892,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   // Kartenregister: id → { size, title, build(card, ctx) }. size: full = ganze Breite, half = halbe Breite
   const CARDS = SW.heuteCards = {
     // Cockpit: der Bildschirm während dem Segeln. Wind jetzt, Speed, Kurs, Ampel und Kleinwerte ohne Scrollen.
-    cockpit: { size: 'full', title: s => `Cockpit · ${s.name}`, build(card, ctx) {
+    cockpit: { size: 'full', title: () => 'Cockpit', build(card, ctx) {
       const body = card.querySelector('.card-b');
       body.innerHTML = `<div class="ck">
           <section class="ck-tile ck-wind" aria-label="Wind jetzt">
@@ -2889,6 +2909,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
             <div class="ck-row"><div><div class="ck-big num" data-k="twa">–</div><div class="ck-unit">° TWA <span data-k="bug"></span></div></div>
               <div class="ck-cmp" data-k="ccmp"></div></div>
             <div class="ck-foot" data-k="pos">Kurs braucht GPS</div></section>
+          <section class="ck-tile ck-nogps" aria-label="GPS aus">
+            <div class="f-lab">Speed · Kurs</div>
+            <p class="ck-nogps-t">Speed, Kurs und Windwinkel erscheinen, sobald GPS läuft</p></section>
           <section class="ck-tile ck-amp" aria-label="Nächste 3 Stunden">
             <div class="f-lab">Nächste 3 Stunden</div>
             <div class="ck-status" data-k="amp">–</div>
@@ -2896,9 +2919,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
             <div class="ck-foot" data-k="ampsub"></div></section>
         </div>
         <div class="ck-strip">
-          <div><span class="f-lab">COG</span><b class="num" data-k="cog">–</b><small>°</small></div>
-          <div><span class="f-lab">Strecke</span><b class="num" data-k="dist">–</b><small>km</small></div>
-          <div><span class="f-lab">Fahrzeit</span><b class="num" data-k="dur">–</b></div>
+          <div class="gps-only"><span class="f-lab">COG</span><b class="num" data-k="cog">–</b><small>°</small></div>
+          <div class="gps-only"><span class="f-lab">Strecke</span><b class="num" data-k="dist">–</b><small>km</small></div>
+          <div class="gps-only"><span class="f-lab">Fahrzeit</span><b class="num" data-k="dur">–</b></div>
           <div><span class="f-lab">Druck 3 h</span><b class="num" data-k="dp">–</b><small>hPa</small></div>
           <div><span class="f-lab">Uhrzeit</span><b class="num" data-k="clock">–</b></div>
           <div><span class="f-lab">Sonnenuntergang</span><b class="num" data-k="sun">–</b></div>
@@ -2906,7 +2929,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         <div data-k="warn"></div>
         <div class="live-bar" data-noswipe>
           <button class="btn primary" type="button" data-a="gps">GPS starten</button>
-          <button class="btn" type="button" data-a="reset">Zurücksetzen</button>
+          <button class="btn gps-only" type="button" data-a="reset">Zurücksetzen</button>
           ${LV.wakeSupported() ? '<label class="toggle"><input type="checkbox" data-a="wake"><span>Bildschirm wach halten</span></label>' : ''}
           <span class="live-state" data-k="state"></span></div>
         <p class="hint">Wind: Modellprognose (15-Minuten-Wert, falls verfügbar) am GPS-Standort, ohne GPS am gewählten Spot. Der Zeiger im Windkreis steht dort, woher der Wind kommt. Speed und Kurs kommen vom GPS des Geräts und bleiben auf dem Gerät. TWA = Winkel zwischen Kurs und Wind, STB/BB = Steuerbord-/Backbord-Bug. Ampel: grün ab ${C.ampel.greenKt} kt Mittelwind, gelb ab ${C.ampel.yellowKt} kt, rot bei Gewitter. GPS braucht die gehostete App oder lokal-starten.bat.</p>`;
@@ -2937,7 +2960,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         $('tws').textContent = wind ? U.r(wind.spd) : '–';
         $('gst').textContent = wind ? U.r(wind.gst) : '–';
         $('wcmp').innerHTML = g.compass({ dir: wind ? wind.dir : null, kind: 'wind', label: '' });
-        $('wsrc').textContent = wind ? `aus ${U.dirName(wind.dir)} ${U.r(wind.dir)}° · Prognose ${U.hhmm(wind.t)} · ${gpsWind ? 'GPS-Standort' : ctx.spot.name}` : 'lade Wind…';
+        $('wsrc').textContent = wind ? `aus ${U.dirName(wind.dir)} ${U.r(wind.dir)}° · ${gpsWind ? 'GPS-Standort' : 'Prognose ' + U.hhmm(wind.t)}` : 'lade Wind…';
         // Speed
         const sogEl = $('sog');
         if (fresh && U.isNum(f.sog)) { sogEl.textContent = f.sog.toFixed(1); sogEl.classList.remove('idle'); }
@@ -2969,6 +2992,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const w = body.querySelector('[data-a="wake"]'); if (w) w.checked = LV.wake;
         $('state').innerHTML = LV.error ? `<span class="t-bad">${U.esc(LV.error)}</span>` : LV.running ? (fresh ? `GPS ± ${Math.round(f.acc)} m` : 'warte auf GPS…') : 'GPS aus';
         card.classList.toggle('is-live', !!(LV.running && fresh));
+        card.classList.toggle('no-gps', !LV.running);                    // ohne GPS: leere Felder ausblenden
       };
       const off = LV.on(() => {
         paint();
@@ -3053,7 +3077,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       paint();
     } },
 
-    ampel: { size: 'full', skeleton: 'fields', title: s => `3h Windcheck · ${s.name}`, build(card, ctx) {
+    ampel: { size: 'full', skeleton: 'fields', title: () => 'Windcheck 3 h', build(card, ctx) {
       ui.fill(card, async body => {
         const { set, meta } = await ctx.spotP;
         const wc = A.windcheck(set.hourly), warn = A.warning(set.hourly, 3);
@@ -3068,7 +3092,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       });
     } },
 
-    now: { size: 'half', skeleton: 'fields', title: s => `Wind jetzt · ${s.name}`, build(card, ctx) {
+    now: { size: 'half', skeleton: 'fields', title: () => 'Wind jetzt', build(card, ctx) {
       ui.fill(card, async body => {
         const { set, meta } = await ctx.spotP;
         const w = windNow(set), days = A.days(set, 3), th = A.thermik(set, days[0]);
@@ -3085,7 +3109,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       });
     } },
 
-    wetter: { size: 'full', skeleton: 'fields', title: s => `Wetter jetzt · ${s.name}`, build(card, ctx) {
+    wetter: { size: 'full', skeleton: 'fields', title: () => 'Wetter jetzt', build(card, ctx) {
       ui.fill(card, async body => {
         const { set, meta } = await ctx.spotP;
         const h = set.hourly, i = U.indexAt(h.t, U.nowSec()), d = A.days(set, 1)[0];
@@ -3095,7 +3119,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const code = h.v.weather_code[i];
         const light = d && d.sunset ? Math.round((d.sunset - U.nowSec()) / 60) : null;
         body.innerHTML = `<div class="grid-fields six">
-          ${g.field({ label: 'Druck MSL', value: U.r(p), unit: 'hPa', status: U.isNum(dp) && dp <= -2 ? 'warn' : '', sub: U.isNum(dp) ? `${dp > 0 ? '▲ +' : dp < 0 ? '▼ ' : ''}${dp.toFixed(1)} hPa in 3 h` : 'Tendenz noch offen' })}
+          ${g.field({ label: 'Druck MSL', value: U.r(p), unit: 'hPa', status: U.isNum(dp) && dp <= -2 ? 'warn' : '', sub: U.isNum(dp) ? `${dp > 0 ? '+' : ''}${dp.toFixed(1)} hPa in 3 h${dp >= 0.5 ? ', steigt' : dp <= -0.5 ? ', fällt' : ''}` : 'Tendenz noch offen' })}
           ${g.field({ label: 'Temperatur', value: U.r(h.v.temperature_2m[i], 1), unit: '°C', sub: `Feuchte ${U.r(h.v.relative_humidity_2m[i])} %` })}
           ${g.field({ label: 'Bewölkung', value: U.r(h.v.cloud_cover[i]), unit: '%', sub: U.esc(L.wmo(code)) })}
           ${g.field({ label: 'Regen 3 h', value: U.r(rain3, 1), unit: 'mm', status: U.isNum(code) && code >= 95 ? 'bad' : rain3 >= 1 ? 'warn' : '' })}
@@ -3128,7 +3152,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       });
     } },
 
-    timeline: { size: 'full', title: s => `Zeitleiste · ${s.name}`, build(card, ctx) {
+    timeline: { size: 'full', title: () => 'Zeitleiste', build(card, ctx) {
       ui.fill(card, async body => {
         const { set, meta } = await ctx.spotP;
         const use15 = set.m15 && SW.api.modelInfo(meta.model).minutely15 && set.m15.src.wind_speed_10m.prim;
@@ -3218,7 +3242,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         sub = `Höchstens ${U.r(mx)} kt bei ${spot.name} – nötig sind ${sport.min}–${sport.max} kt während ${C.minWindowHours} h`;
       }
       el.className = 'verdict ' + cls;
-      el.innerHTML = `<b>${U.esc(main)}</b><span>${U.esc(sub)} · ${U.esc(spot.name)}</span>`;
+      el.innerHTML = `<b>${U.esc(main)}</b><span>${U.esc(sub)}</span>`;   // Spot steht schon in der Kopfzeile
     }).catch(() => el.remove());
     return el;
   }
@@ -3239,6 +3263,16 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const card = ui.card({ id: 'c-h-' + id, cls: 'sz-' + size, title: def.title ? def.title(spot) : '', sub: def.sub, skeleton: def.skeleton || 'block' });
         grid.appendChild(card);
         def.build(card, ctx);
+        if (n > 1) {                                                     // ab der dritten Karte eingeklappt – ein Tipp auf den Titel öffnet
+          const open = (SW.settings.heuteOpen || []).includes(id);
+          card.classList.add('foldable'); card.classList.toggle('fold', !open);
+          const h = card.querySelector('.card-h');
+          if (h) { h.insertAdjacentHTML('afterbegin', ui.icon('chevdown', 'fold-ic')); h.addEventListener('click', e => {
+            if (e.target.closest('.card-tools')) return;
+            const nowOpen = card.classList.toggle('fold') === false;
+            const list = new Set(SW.settings.heuteOpen || []); nowOpen ? list.add(id) : list.delete(id); SW.saveSettings({ heuteOpen: [...list] });
+          }); }
+        }
       });
       // Halbe Karten ohne Partner auf volle Breite ziehen, damit keine Lücken entstehen
       let col = 0;
@@ -3285,14 +3319,15 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         <div class="sail-dial"><div data-k="dial"></div>
           <div class="sail-legend"><span><i style="background:var(--accent)"></i>Scheinbar</span><span><i style="background:var(--route)"></i>Wahr</span></div></div>
         <div class="sail-tiles">
-          <div class="st"><span class="f-lab">AWS scheinbar</span><b class="num" data-k="aws">–</b><small>kt</small></div>
-          <div class="st"><span class="f-lab">AWA scheinbar</span><b class="num" data-k="awa">–</b><small data-k="awas">°</small></div>
+          <div class="st need"><span class="f-lab">AWS scheinbar</span><b class="num" data-k="aws">–</b><small>kt</small></div>
+          <div class="st need"><span class="f-lab">AWA scheinbar</span><b class="num" data-k="awa">–</b><small data-k="awas">°</small></div>
           <div class="st"><span class="f-lab">TWS wahr</span><b class="num" data-k="tws">–</b><small data-k="twsx">kt</small></div>
-          <div class="st"><span class="f-lab">TWA wahr</span><b class="num" data-k="twa">–</b><small data-k="twas">°</small></div>
-          <div class="st"><span class="f-lab">Fahrt</span><b class="num" data-k="bs">–</b><small data-k="bsx">kt</small></div>
-          <div class="st"><span class="f-lab">VMG</span><b class="num" data-k="vmg">–</b><small>kt zum Wind</small></div>
-          <div class="st"><span class="f-lab">Kurs</span><b class="num" data-k="hdg">–</b><small data-k="hdgx">°</small></div>
+          <div class="st need"><span class="f-lab">TWA wahr</span><b class="num" data-k="twa">–</b><small data-k="twas">°</small></div>
+          <div class="st need"><span class="f-lab">Fahrt</span><b class="num" data-k="bs">–</b><small data-k="bsx">kt</small></div>
+          <div class="st need"><span class="f-lab">VMG</span><b class="num" data-k="vmg">–</b><small>kt zum Wind</small></div>
+          <div class="st need"><span class="f-lab">Kurs</span><b class="num" data-k="hdg">–</b><small data-k="hdgx">°</small></div>
           <div class="st"><span class="f-lab">TWD Wind aus</span><b class="num" data-k="twd">–</b><small data-k="twdx">°</small></div>
+          <div class="st st-nogps"><span class="f-lab">Fahrt · Kurs · scheinbarer Wind</span><p>Erscheinen, sobald GPS läuft oder der Windgeber verbunden ist</p></div>
         </div>
         <div class="timer-bar" data-k="timer" data-noswipe hidden></div>
         <div class="nav-panel" data-k="nav" data-noswipe></div>
@@ -3300,9 +3335,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
           <span class="src" data-k="srcw">Windgeber aus</span><span class="src" data-k="srcg">GPS aus</span><span class="src" data-k="clock"></span>
           <span class="sail-btns">
             <button class="btn primary" type="button" data-a="gps">GPS starten</button>
-            <button class="btn theme-cyc" type="button" data-a="theme" title="Lichtmodus wechseln">${{ dark: '◐ Dunkel', sun: '☀ Hell', night: '● Nacht' }[SW.settings.theme] || '◐ Dunkel'}</button>
-            <button class="btn full-btn" type="button" data-a="full">${document.documentElement.classList.contains('sail-full') ? '⤡ Vollbild aus' : '⤢ Vollbild'}</button>
-            <button class="btn menu-btn" type="button" data-a="menu">☰ Menü</button></span></div>
+            <button class="btn theme-cyc" type="button" data-a="theme" title="Lichtmodus wechseln">${({ dark: ui.icon('contrast') + '<span>Dunkel</span>', sun: ui.icon('sun') + '<span>Hell</span>', night: ui.icon('moon') + '<span>Nacht</span>' })[SW.settings.theme] || ui.icon('contrast') + '<span>Dunkel</span>'}</button>
+            <button class="btn full-btn" type="button" data-a="full">${fullLbl()}</button>
+            <button class="btn menu-btn" type="button" data-a="menu">${ui.icon('menu')}<span>Menü</span></button></span></div>
         <p class="sail-basis" data-k="basis"></p>
       </section>`);
       const el = root.querySelector('#sail'), $ = k => el.querySelector(`[data-k="${k}"]`);
@@ -3322,14 +3357,14 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const awaS = I.get('awa'), awsS = I.get('aws');
         if (sensor && U.isNum(awaS) && U.isNum(awsS)) {                 // Windgeber da: wahren Wind daraus berechnen
           aws = awsS; awa = awaS; tw = SW.wind.true(aws, awa, bs, hdg);
-          basis = `Scheinbarer Wind vom Windgeber. Wahrer Wind berechnet mit ${U.isNum(stw) ? 'Logge' : 'GPS-Speed'} und ${U.isNum(hdgS) ? 'Kompass' : 'GPS-Kurs'}${U.isNum(stw) ? '' : ' (Wind über Grund, Strömung nicht berücksichtigt)'}.`;
+          basis = `Wind vom Windgeber · wahr mit ${U.isNum(stw) ? 'Logge' : 'GPS'} und ${U.isNum(hdgS) ? 'Kompass' : 'GPS-Kurs'}`;
         } else {                                                        // kein Windgeber: Modellwind + GPS
           const mw = gpsWind || spotWind;
           if (mw && U.isNum(hdg)) {
             const twa = SW.wind.signedAngle(mw.dir, hdg), ap = SW.wind.apparent(mw.spd, twa, bs);
             tw = { tws: mw.spd, twa, twd: mw.dir }; aws = ap && ap.aws; awa = ap && ap.awa;
           } else if (mw) tw = { tws: mw.spd, twa: null, twd: mw.dir };
-          basis = `Kein Windgeber verbunden: wahrer Wind aus der Prognose (${gpsWind ? 'GPS-Standort' : U.esc(spot.name)}), scheinbarer Wind daraus mit GPS berechnet. Schätzung – Böen und Dreher sieht das Modell nicht.`;
+          basis = `Wind aus der Prognose · ${gpsWind ? 'GPS-Standort' : U.esc(spot.name)} · ohne Böen und Dreher`;
         }
         $('dial').innerHTML = windDial(awa, tw && tw.twa);
         $('aws').textContent = U.isNum(aws) ? aws.toFixed(1) : '–';
@@ -3345,7 +3380,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         $('srcg').innerHTML = LV.running ? (fresh ? `<b class="t-ok">GPS ± ${Math.round(f.acc)} m</b>` : '<b class="t-warn">suche GPS…</b>') : 'GPS aus';
         $('clock').textContent = new Date().toLocaleTimeString('de-CH', { timeZone: C.timeZone, hour: '2-digit', minute: '2-digit' });
         $('basis').innerHTML = basis;
-        el.querySelector('[data-a="gps"]').hidden = LV.running;            // nur nötig, solange GPS aus ist – sonst alles im Menü
+        el.querySelector('[data-a="gps"]').hidden = LV.running;
+        el.querySelector('.sail-tiles').classList.toggle('no-data', !LV.running && !sensor);   // ohne GPS und Windgeber: nur Wahrwind zeigen            // nur nötig, solange GPS aus ist – sonst alles im Menü
         el.classList.toggle('calm', LV.running && !!N.state());            // unterwegs mit Route: nur Instrumente und Karte
       };
       // Routenführung und Mini-Karte: Karte ist immer da (Boot), mit gestarteter Route zusätzlich Linie, Status und Werte
@@ -3368,7 +3404,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
               <button class="btn" type="button" data-n="stop">Beenden</button>
               <span class="nav-calc" data-n="calc"></span></div>` : `
             <div class="nav-head"><span class="f-lab">Position</span></div>
-            <p class="nav-none">Keine Route aktiv. Unter «Routen» › Planer eine Strecke oder Regatta wählen und «Route starten» tippen – dann zeigt die Karte die Route und ob du darauf bist.</p>`}
+            <p class="nav-none">Keine Route aktiv · starten unter Routen › Planer</p>`}
           </div>
           <div class="nav-right">
             <div class="nav-map" id="nav-map"></div>
@@ -3378,7 +3414,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
               <button type="button" data-z="in" aria-label="Hineinzoomen">+</button>
               <button type="button" data-z="out" aria-label="Herauszoomen">−</button>
               <button type="button" data-z="boat" aria-label="Boot zentrieren" title="Boot zentrieren">◎</button>
-              <button type="button" data-z="all" aria-label="${st ? 'Ganze Route' : 'Ganzer See'}" title="${st ? 'Ganze Route' : 'Ganzer See'}">⤢</button>
+              <button type="button" data-z="all" aria-label="${st ? 'Ganze Route' : 'Ganzer See'}" title="${st ? 'Ganze Route' : 'Ganzer See'}">${ui.icon('fit')}</button>
             </div></div></div>`;
         navEl.dataset.key = st ? String(st.startedAt) : 'none';
         navEl.dataset.line = '';
@@ -3494,7 +3530,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const tLine = U.isNum(sog) && sog > 0.5 ? li.dist / (sog * 0.5144) : null;
         const early = rem !== null && rem > 0 && li.onCourseSide;            // vor dem Start schon auf der Bahnseite
         timerEl.classList.toggle('ocs', early);
-        qt('lsub').textContent = early ? 'ZU FRÜH – zurück hinter die Linie!' : `m ${li.onCourseSide ? 'auf der Bahnseite' : 'vor der Linie'}${li.within ? '' : ' (ausserhalb der Linienenden)'}${tLine !== null ? ` · ${fmtT(tLine)} bis Linie` + (rem !== null && rem > 0 ? (tLine < rem ? ` · ${fmtT(rem - tLine)} zu früh` : ' · knapp') : '') : ''}`;
+        qt('lsub').textContent = early ? 'ZU FRÜH – zurück hinter die Linie' : `m ${li.onCourseSide ? 'auf der Bahnseite' : 'vor der Linie'}${li.within ? '' : ' (ausserhalb der Linienenden)'}${tLine !== null ? ` · ${fmtT(tLine)} bis Linie` + (rem !== null && rem > 0 ? (tLine < rem ? ` · ${fmtT(rem - tLine)} zu früh` : ' · knapp') : '') : ''}`;
       };
       function timerSheet() {
         const c = TM.cfg();
@@ -3526,7 +3562,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const a = e.target.closest('[data-a]'); if (!a) return;
         if (a.dataset.a === 'gps') { SW.regatta.timer.unlockAudio(); LV.start(); }
         if (a.dataset.a === 'menu') menuSheet();
-        if (a.dataset.a === 'full') { toggleFull(); a.textContent = document.documentElement.classList.contains('sail-full') ? '⤡ Vollbild aus' : '⤢ Vollbild'; }   // eigener Knopf, ein Tipp
+        if (a.dataset.a === 'full') { toggleFull(); a.innerHTML = fullLbl(); }   // eigener Knopf, ein Tipp
         if (a.dataset.a === 'theme') { const order = ['dark', 'sun', 'night'], nx = order[(order.indexOf(SW.settings.theme) + 1) % 3]; SW.saveSettings({ theme: nx }); SW.app.applyTheme(); ui.toast(ui.themeName(nx)); }
       };
       paint();
@@ -3557,6 +3593,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     };
   }
 
+  // Beschriftung des Vollbild-Knopfs (Icon + Text)
+  function fullLbl() { return document.documentElement.classList.contains('sail-full') ? ui.icon('shrink') + '<span>Vollbild aus</span>' : ui.icon('expand') + '<span>Vollbild</span>'; }
+
   // Vollbild: Kopfzeile und Navigation ausblenden, zusätzlich echtes Vollbild, wo der Browser es erlaubt
   function toggleFull() {
     const h = document.documentElement, on = !h.classList.contains('sail-full');
@@ -3567,7 +3606,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   }
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) document.documentElement.classList.remove('sail-full');
-    const b = document.querySelector('.sail-bar [data-a="full"]'); if (b) b.textContent = document.documentElement.classList.contains('sail-full') ? '⤡ Vollbild aus' : '⤢ Vollbild';
+    const b = document.querySelector('.sail-bar [data-a="full"]'); if (b) b.innerHTML = fullLbl();
   });
 
   // Verbindung zum Windgeber einstellen
@@ -3651,7 +3690,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       chips.onclick = e => {
         const b = e.target.closest('.chip'); if (!b) return;
         if (b.dataset.add) {                                          // neuen Favoriten suchen und speichern
-          const box = U.el('<div><p class="hint" style="display:block">Ort suchen und antippen – er wird als Favorit gespeichert. Löschen und sortieren unter Setup › Spots.</p></div>');
+          const box = U.el('<div><p class="hint hint-short">Ort suchen und antippen · sortieren unter Setup › Spots</p></div>');
           let sh;
           box.prepend(SW.searchBox(r => {
             const s = { id: 'u' + U.uid(), name: r.name, lat: r.lat, lon: r.lon, fav: true };
@@ -3929,7 +3968,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
             <span class="rv-sys">${ui.pill(sy.st, sy.text)}</span>
             <span class="rv-verdict">${verdict}</span></button>`;
         }).join('')}</div>
-          <p class="hint rv-legend"><i class="sp-k area"></i> Mittelwind <i class="sp-k gust"></i> Böen <i class="sp-k min"></i> ${U.esc(sport.label)} ab ${sport.min} kt · Kachel antippen für die Grafiken</p>`;
+          <p class="rv-legend"><svg viewBox="0 0 20 6" class="lg-line"><line x1="0" y1="3" x2="20" y2="3" stroke="var(--accent)" stroke-width="2"/></svg>Mittelwind<svg viewBox="0 0 20 6" class="lg-line"><line x1="0" y1="3" x2="20" y2="3" stroke="var(--fg-2)" stroke-width="1.5" stroke-dasharray="4 3"/></svg>Böen<svg viewBox="0 0 20 6" class="lg-line"><line x1="0" y1="3" x2="20" y2="3" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="5 3"/></svg>${U.esc(sport.label)} ab ${sport.min} kt</p>`;
         body.querySelector('.rv-tiles').onclick = e => { const b = e.target.closest('[data-rv]'); if (!b || b.dataset.rv === sel) return; SW.saveSettings({ revier: b.dataset.rv }); SW.app.show('reviere', true); };
         return r.meta;
       });
@@ -4135,7 +4174,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         const suit = !U.isNum(tw) ? '' : tw < 10 ? 'dicker Neopren, Schuhe, Haube' : tw < 15 ? 'Neopren 5/4 mm' : tw < 19 ? 'Neopren 4/3 mm' : 'Shorty oder 3/2 mm';   // grobe Faustregel
         body.innerHTML = `<div class="grid-fields five">
             ${g.field({ label: 'Abfluss', value: U.r(q), unit: 'm³/s', status: z.st, sub: ui.pill(z.st, z.label) })}
-            ${g.field({ label: 'Änderung seit 6 h', value: U.isNum(dQ) ? (dQ > 0 ? '+' : '') + U.r(dQ) : '–', unit: 'm³/s', sub: U.isNum(dQ) ? (Math.abs(dQ) < 5 ? '◆ stabil' : dQ > 0 ? `▲ steigt (vor 6 h: ${U.r(q - dQ)})` : `▼ sinkt (vor 6 h: ${U.r(q - dQ)})`) : '' })}
+            ${g.field({ label: 'Änderung seit 6 h', value: U.isNum(dQ) ? (dQ > 0 ? '+' : '') + U.r(dQ) : '–', unit: 'm³/s', sub: U.isNum(dQ) ? (Math.abs(dQ) < 5 ? 'stabil' : dQ > 0 ? `steigt, vor 6 h ${U.r(q - dQ)}` : `sinkt, vor 6 h ${U.r(q - dQ)}`) : '' })}
             ${g.field({ label: 'Wassertemperatur', value: U.r(tw, 1), unit: '°C', sub: U.esc(suit) })}
             ${g.field({ label: 'Pegel', value: U.r(hgt, 2), unit: 'm ü.M.', sub: U.isNum(dH) ? `${dH > 0 ? '+' : ''}${U.r(dH)} cm in 24 h` : '' })}
             ${g.field({ label: 'Messzeit', value: cur.flow ? U.hhmm(cur.flow.t) : '–', sub: U.isNum(age) && age > 60 ? '<span class="t-warn">Messung älter als 1 h</span>' : 'BAFU, 10-min-Wert' })}
@@ -4144,8 +4183,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         return [m1, m2];
       });
 
-      // Änderung gegenüber vor 6 Stunden in Worten: «▼ 12 m³/s weniger als vor 6 h»
-      const trendTxt = d => !U.isNum(d) ? 'Trend unbekannt' : Math.abs(d) < 5 ? '◆ stabil (seit 6 h)' : d > 0 ? `▲ ${U.r(d)} m³/s mehr als vor 6 h` : `▼ ${U.r(-d)} m³/s weniger als vor 6 h`;
+      // Änderung gegenüber vor 6 Stunden in Worten: «12 m³/s weniger als vor 6 h»
+      const trendTxt = d => !U.isNum(d) ? 'Trend unbekannt' : Math.abs(d) < 5 ? 'stabil seit 6 h' : d > 0 ? `${U.r(d)} m³/s mehr als vor 6 h` : `${U.r(-d)} m³/s weniger als vor 6 h`;
       ui.fill(cUp, async body => {
         const [{ data: lat, meta: m1 }, { data: rng }] = await Promise.all([latestP, rangeP]);
         body.innerHTML = `<div class="grid-fields two">${W.upstream.map(u => {
@@ -4376,30 +4415,30 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     const setMore = open => {                                          // Details: Vergleich der Linien und beste Startzeit
       more.querySelector('.rt-more-b').hidden = !open;
       const b = more.querySelector('#rt-morebtn'); b.setAttribute('aria-expanded', String(open));
-      b.textContent = open ? '▴ Details ausblenden' : '▾ Details: Vergleich der Linien · beste Startzeit über den Tag';
+      b.innerHTML = open ? `${ui.icon('chevup')}<span>Details ausblenden</span>` : `${ui.icon('chevdown')}<span>Details: Vergleich der Linien · beste Startzeit über den Tag</span>`;
     };
     setMore(!!SW.settings.rtMore);
     more.querySelector('#rt-morebtn').onclick = () => { const o = !SW.settings.rtMore; SW.saveSettings({ rtMore: o }); setMore(o); if (o && lastScan) drawScan(lastScan); };
     const mb = cMain.querySelector('.card-b'), cmpB = cCmp.querySelector('.card-b'), scanB = cScan.querySelector('.card-b');
     mb.innerHTML = `<div class="rt-top" data-noswipe>
         <label class="rt-f-sel">Strecke<select id="rt-sel"></select></label>
-        <button class="btn rt-dirbtn" type="button" id="rt-dirbtn" title="Richtung umkehren" aria-label="Richtung umkehren">⇄</button>
+        <button class="btn rt-dirbtn" type="button" id="rt-dirbtn" title="Richtung umkehren" aria-label="Richtung umkehren">${ui.icon('swap')}</button>
         <label>Tag<select id="rt-day"></select></label>
         <label>Start<select id="rt-time"></select></label>
-        <button class="btn rt-menubtn" type="button" id="rt-menu" aria-label="Weitere Aktionen">⋯ Mehr</button></div>
+        <button class="btn rt-menubtn" type="button" id="rt-menu" aria-label="Weitere Aktionen">${ui.icon('more')}<span>Mehr</span></button></div>
       <select id="rt-dir" hidden><option value="0">vorwärts</option><option value="1">rückwärts</option></select>
       <p id="rt-dirtxt" class="rt-dirtxt"></p>
       <div id="rt-best" class="rt-best" data-noswipe></div>
       <div class="rt-mapwrap" data-noswipe>
         <div id="rt-map" class="route-map"></div>
         <div class="rt-mapacts">
-          <button class="btn primary edit-btn" type="button" id="rt-editbtn" aria-pressed="false">${ui.icon('edit')}<span>Bearbeiten</span></button>
+          <button class="btn edit-btn" type="button" id="rt-editbtn" aria-pressed="false">${ui.icon('edit')}<span>Bearbeiten</span></button>
           <button class="btn save-btn" type="button" id="rt-save">${ui.icon('archiv')}<span>Speichern</span></button></div>
         <div class="map-tools rt-maptools">
           <button class="btn map-btn" type="button" data-z="in" aria-label="Hineinzoomen">+</button>
           <button class="btn map-btn" type="button" data-z="out" aria-label="Herauszoomen">−</button>
-          <button class="btn map-btn" type="button" data-z="fit" aria-label="Strecke einpassen" title="Strecke einpassen">⤢</button>
-          <button class="btn map-btn" type="button" data-z="pan" aria-pressed="false" aria-label="Karte verschieben" title="Karte verschieben">✋</button></div>
+          <button class="btn map-btn" type="button" data-z="fit" aria-label="Strecke einpassen" title="Strecke einpassen">${ui.icon('fit')}</button>
+          <button class="btn map-btn" type="button" data-z="pan" aria-pressed="false" aria-label="Karte verschieben" title="Karte verschieben">${ui.icon('move')}</button></div>
         <div id="rt-lakes"></div>
         <div id="rt-tapbar" class="tapbar rt-tapover" hidden data-noswipe><span>Antippen setzt:</span><div class="chips small" id="rt-tap"></div></div></div>
       <div class="map-legend compact" role="group" aria-label="Linien ein- und ausblenden" data-noswipe>${LINES.map(l => `<button type="button" class="lg-item" data-l="${l.k}" aria-pressed="${lineOn(l.k)}" title="${U.esc(l.note)}">
@@ -4504,7 +4543,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       mb.querySelector('#rt-del').hidden = isFixed(r);                     // Vorlagen lassen sich nicht löschen
       mb.querySelector('#rt-editbtn span').textContent = editing() ? 'Fertig' : isFixed(r) ? 'Eigene Version' : 'Bearbeiten';
       { const ps = rev() ? r.points.slice().reverse() : r.points, nm = p => (p ? p.name.replace(/^(Start|Ziel) | \(Linie\)$/g, '') : '–');
-        mb.querySelector('#rt-dirtxt').innerHTML = r.points.length < 2 && !rg ? '<b>Ziel auf der Karte antippen</b> – danach Wegpunkte nach Wunsch' : `${isFixed(r) ? '🔒 ' : ''}<b>${U.esc(nm(ps[0]))} → ${U.esc(nm(ps[ps.length - 1]))}</b>${isFixed(r) ? ' · Vorlage, bleibt immer gleich' : r.base ? ' · eigene Variante' : ''}`; }
+        mb.querySelector('#rt-dirtxt').innerHTML = r.points.length < 2 && !rg ? '<b>Ziel auf der Karte antippen</b> – danach Wegpunkte nach Wunsch' : `${isFixed(r) ? ui.icon('lock', 'ic-inline') : ''}<b>${U.esc(nm(ps[0]))} → ${U.esc(nm(ps[ps.length - 1]))}</b>${isFixed(r) ? ' · Vorlage, bleibt immer gleich' : r.base ? ' · eigene Variante' : ''}`; }
       mb.querySelector('#rt-tapbar').hidden = !editing();
       const n = r.points.length;
       const tag = k => (k === 0 ? 'S' : k === n - 1 ? 'Z' : String(k));
@@ -4945,7 +4984,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       const bestEl = mb.querySelector('#rt-best');
       if (ok.length) {                                                 // Schritt 2: beste Startzeit direkt anbieten
         const b0 = ok.reduce((a, b) => (b.dur < a.dur ? b : a));
-        bestEl.innerHTML = +tSel.value === b0.m ? `<span class="t-ok">✓ Schnellste Startzeit gewählt (${U.hhmm(b0.s)}, ${fmtDur(b0.dur)})</span>`
+        bestEl.innerHTML = +tSel.value === b0.m ? `<span class="t-ok">${ui.icon('check', 'ic-inline')}Schnellste Startzeit gewählt (${U.hhmm(b0.s)}, ${fmtDur(b0.dur)})</span>`
           : `<button type="button" class="btn" id="rt-bestbtn">Schnellste Startzeit: ${U.hhmm(b0.s)} (${fmtDur(b0.dur)}) übernehmen</button>`;
         const bb = bestEl.querySelector('#rt-bestbtn'); if (bb) bb.onclick = () => { tSel.value = String(b0.m); computeAll(); drawScan(res); };
       } else bestEl.innerHTML = '';
@@ -4958,7 +4997,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
           ${g.field({ label: 'Fahrzeit dann', value: fmtDur(best.dur), status: isRec ? 'ok' : '', sub: isRec ? 'unter Rekord' : `Rekord ${R.recordTime}` })}
           ${g.field({ label: 'Ankunft', value: U.hhmm(best.end) })}</div>
         <div class="chart-host"></div>
-        <div class="row-btns"><button class="btn primary" type="button" id="scan-use">Start ${U.hhmm(best.s)} übernehmen</button></div>`;
+        <div class="row-btns"><button class="btn" type="button" id="scan-use">Start ${U.hhmm(best.s)} übernehmen</button></div>`;
       const pts = res.filter(x => x.s);
       SW.chart(scanB.querySelector('.chart-host'), { t: pts.map(x => x.s), height: 200, nowLine: false, axes: { l: { min: 0, unit: 'min' } },
         series: [{ label: 'Fahrzeit je Startzeit', values: pts.map(x => (U.isNum(x.dur) ? x.dur / 60 : null)), color: 'var(--accent)', width: 2.4, unit: 'min' }],
@@ -4979,7 +5018,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   function freeHtml(fr) {
     if (!fr.done) return ui.note(U.esc(fr.note), 'warn');
     return `<div class="route-head"><span class="lg-dot" style="background:var(--route)"></span><b>Generierte Route</b><span>Start ${U.hhmm(fr.start)}</span>
-        <button class="btn primary route-go" type="button" id="fr-start"><i class="st-n">4</i>Route starten ▸ Segelscreen</button></div>
+        <button class="btn primary route-go" type="button" id="fr-start">Route starten ${ui.icon('arrowright')}</button></div>
       <div class="grid-fields four">
         ${g.field({ label: 'Fahrzeit', value: fmtDur(fr.duration), status: SW.route().id === 'gelbesband' && fr.duration < RECORD_S ? 'ok' : '', sub: SW.route().id !== 'gelbesband' ? `Start ${U.hhmm(fr.start)}` : fr.duration < RECORD_S ? 'unter Rekord' : `Rekord ${R.recordTime}` })}
         ${g.field({ label: 'Ankunft', value: U.hhmm(fr.end) })}
@@ -5158,7 +5197,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
               ${g.field({ label: 'Gesegelt', value: U.r(gen.km, 1), unit: 'km', sub: `${U.r(gen.km / 1.852, 1)} sm` })}
               ${g.field({ label: 'Manöver', value: `${gen.tacks}<small> W</small> ${gen.gybes}<small> H</small>` })}</div>` : `<p class="hint" style="display:block">${isRg(e) ? `${(e.route.regatta.marks || []).length} Bojen · ${e.route.regatta.laps || 1} ${e.route.regatta.laps === 1 ? 'Runde' : 'Runden'}` : `${(e.route.points || []).length} Punkte`} · ohne generierte Route</p>`}
           <div class="row-btns arch-btns" data-noswipe>
-            <button class="btn primary" type="button" data-a="open">Im Planer öffnen</button>
+            <button class="btn" type="button" data-a="open">Im Planer öffnen</button>
             <button class="btn" type="button" data-a="edit">Umbenennen / Notiz</button>
             <button class="btn" type="button" data-a="dup">Kopie</button>
             <button class="btn" type="button" data-a="del">Löschen</button></div>`;
@@ -5349,7 +5388,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   let map = null;
   const drop = () => { if (map) { try { map.off(); map.remove(); } catch (e) { /* schon weg */ } map = null; } };
 
-  const links = c => `<a class="btn primary" href="${U.esc(c.url)}" target="_blank" rel="noopener noreferrer">Webcam öffnen ↗</a>${c.site ? `<a class="btn" href="${U.esc(c.site)}" target="_blank" rel="noopener noreferrer">Website ↗</a>` : ''}`;
+  const links = c => `<a class="btn" href="${U.esc(c.url)}" target="_blank" rel="noopener noreferrer">${ui.icon('ext')}<span>Webcam öffnen</span></a>${c.site ? `<a class="btn" href="${U.esc(c.site)}" target="_blank" rel="noopener noreferrer">${ui.icon('ext')}<span>Website</span></a>` : ''}`;
 
   SW.page('webcams', {
     label: 'Webcams', icon: 'cam',
@@ -5361,7 +5400,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       root.appendChild(cMap); root.appendChild(cList);
       const mb = cMap.querySelector('.card-b');
       mb.innerHTML = `<div id="cam-map" class="cam-map" data-noswipe></div>
-        <p class="hint" style="display:block">Punkt antippen → «Webcam öffnen». Das Bild öffnet sich beim Betreiber in einem neuen Fenster; die App zeigt keine fremden Bilder an. Standorte ungefähr. Oben links einen See wählen zum Hineinzoomen.</p>`;
+        <p class="hint hint-short">Standorte ungefähr · Bilder öffnen sich beim Betreiber</p>`;
       // Liste: gleiche Links ohne Karte (auch offline lesbar)
       const byRev = {};
       ['Vierwaldstättersee', 'Urnersee', 'Zugersee', 'Sempachersee', 'Comersee'].forEach(a => { const l = C.webcams.filter(c => c.area === a); if (l.length) byRev[a] = l; });   // Liste nach See geordnet
@@ -5469,7 +5508,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       cModel.querySelector('#s-model').onclick = () => SW.app.modelSheet();
       cUser.querySelector('.card-b').innerHTML = `<div class="user-row"><div><b class="user-name">${U.esc(SW.users.label())}</b>
           <span class="hint" style="display:block">Favoriten, Strecken und Routenarchiv gehören zu diesem Profil und bleiben auf diesem Gerät.</span></div>
-          <div class="row-btns"><button class="btn primary" type="button" id="u-switch">Profil wechseln</button><button class="btn" type="button" id="u-intro">Einführung zeigen</button></div></div>`;
+          <div class="row-btns"><button class="btn" type="button" id="u-switch">Profil wechseln</button><button class="btn" type="button" id="u-intro">Einführung zeigen</button></div></div>`;
       cUser.querySelector('#u-switch').onclick = () => SW.users.choose(false);
       cUser.querySelector('#u-intro').onclick = () => SW.users.intro();
       profileCard(cProf.querySelector('.card-b'));
@@ -5488,7 +5527,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     const allCards = Object.keys(C.heuteCards);
     const order = m.cards.concat(allCards.filter(c => !m.cards.includes(c)));   // eingeblendete zuerst, Rest dahinter
     const wind = ['windsurf', 'segeln'];
-    b.innerHTML = `<div class="chips" role="radiogroup" aria-label="Modus wählen">${Object.keys(S.modes).map(x => `<button type="button" class="chip ${x === k ? 'on' : ''}" data-m="${x}">${U.esc(S.modes[x].label)}${x === S.mode ? ' ●' : ''}</button>`).join('')}</div>
+    b.innerHTML = `<div class="chips" role="radiogroup" aria-label="Modus wählen">${Object.keys(S.modes).map(x => `<button type="button" class="chip ${x === k ? 'on' : ''}" data-m="${x}">${U.esc(S.modes[x].label)}${x === S.mode ? ' · aktiv' : ''}</button>`).join('')}</div>
       <h3 class="sub-h">Seiten</h3>
       <div class="toggles">${PAGES.map(p => `<label class="toggle"><input type="checkbox" data-page="${p.id}" ${m.pages.includes(p.id) ? 'checked' : ''} ${p.id === 'heute' && m.pages.includes('heute') && m.pages.length === 1 ? 'disabled' : ''}><span>${U.esc(p.setupLabel || p.label)}</span></label>`).join('')}</div>
       <h3 class="sub-h">Karten auf «Heute» <small>Reihenfolge mit Pfeilen</small></h3>
@@ -5773,7 +5812,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     const failed = U.$$('#page .is-error').length;                      // Karten ganz ohne Daten
     el.className = 'status ' + (offline || err || failed ? 'bad' : old ? 'warn' : '');
     el.textContent = failed && !offline ? `${failed} ${failed === 1 ? 'Karte' : 'Karten'} ohne Daten` : offline ? `Offline · Stand ${oldest ? U.dateTime(oldest / 1000) : '–'}` : err ? `Fehler · zeige Stand ${U.dateTime(oldest / 1000)}`
-      : oldest ? (old ? `Daten älter als 1 h · ${U.hhmm(oldest / 1000)}` : `Stand ${U.hhmm(oldest / 1000)}`) : '';
+      : oldest ? (old ? `Daten älter als 1 h · ${U.hhmm(oldest / 1000)}` : `Stand ${U.hhmm(oldest / 1000)} · ${SW.api.modelInfo(SW.settings.model).label}`) : '';   // einmal oben statt unter jeder Karte
   }
   // Regelmässig prüfen, ob die sichtbare Seite veraltet ist (nie unsichtbare Seiten laden)
   function tick() {
